@@ -105,45 +105,67 @@ export const LeadWorkspace: React.FC<LeadWorkspaceProps> = ({
             </div>
           </div>
 
-          {/* Quick Metrics Bar */}
-          <div className="flex flex-wrap items-center gap-4 border-t border-slate-800 pt-4 lg:border-t-0 lg:pt-0">
-            <div className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Target Budget
-              </span>
-              <span className="text-sm font-extrabold text-emerald-400 flex items-center justify-center gap-0.5 mt-0.5">
-                <DollarSign className="h-3.5 w-3.5" />
-                {lead.budget}
-              </span>
+          {/* Quick Metrics & Sales Action Bar */}
+          <div className="flex flex-col gap-3 border-t border-slate-800 pt-4 lg:border-t-0 lg:pt-0 lg:items-end">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-1.5 text-center">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Budget
+                </span>
+                <span className="text-xs font-extrabold text-emerald-400 flex items-center justify-center gap-0.5 mt-0.5">
+                  <DollarSign className="h-3 w-3" />
+                  {lead.budget}
+                </span>
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-1.5 text-center">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Location
+                </span>
+                <span className="text-xs font-semibold text-slate-200 flex items-center justify-center gap-1 mt-0.5">
+                  <MapPin className="h-3 w-3 text-indigo-400" />
+                  {lead.location}
+                </span>
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-1.5 text-center">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Timeline
+                </span>
+                <span className="text-xs font-semibold text-slate-200 flex items-center justify-center gap-1 mt-0.5">
+                  <Calendar className="h-3 w-3 text-amber-400" />
+                  {lead.buyingTimeline}
+                </span>
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-1.5 text-center">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Score
+                </span>
+                <span className={`text-xs font-black px-2 py-0.5 rounded-lg border ${scoreColor} inline-block mt-0.5`}>
+                  {score} <span className="text-[9px] font-medium text-slate-400">/ 100</span>
+                </span>
+              </div>
             </div>
 
-            <div className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Location
-              </span>
-              <span className="text-sm font-semibold text-slate-200 flex items-center justify-center gap-1 mt-0.5">
-                <MapPin className="h-3.5 w-3.5 text-indigo-400" />
-                {lead.location}
-              </span>
-            </div>
-
-            <div className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Timeline
-              </span>
-              <span className="text-sm font-semibold text-slate-200 flex items-center justify-center gap-1 mt-0.5">
-                <Calendar className="h-3.5 w-3.5 text-amber-400" />
-                {lead.buyingTimeline}
-              </span>
-            </div>
-
-            <div className="rounded-xl border border-slate-800 bg-slate-950 px-4 py-2 text-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Lead Score
-              </span>
-              <span className={`text-base font-black px-2 py-0.5 rounded-lg border ${scoreColor} inline-block mt-0.5`}>
-                {score} <span className="text-[10px] font-medium text-slate-400">/ 100</span>
-              </span>
+            {/* Salesperson Action Bar */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <a
+                href={`tel:${lead.customerName}`}
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-md hover:bg-emerald-500 transition-all"
+              >
+                <span>Call {lead.customerName}</span>
+              </a>
+              <button
+                onClick={() => {
+                  const el = document.getElementById('suggested-response-section');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition-all"
+              >
+                <MessageSquare className="h-3.5 w-3.5 text-indigo-400" />
+                <span>Suggested Response</span>
+              </button>
             </div>
           </div>
         </div>
@@ -241,10 +263,12 @@ export const LeadWorkspace: React.FC<LeadWorkspaceProps> = ({
           </div>
 
           {/* Suggested Customer Response Card */}
-          <SuggestedResponseCard
-            response={analysis?.suggestedResponse}
-            customerName={lead.customerName}
-          />
+          <div id="suggested-response-section">
+            <SuggestedResponseCard
+              response={analysis?.suggestedResponse}
+              customerName={lead.customerName}
+            />
+          </div>
         </div>
 
         {/* Right Column: Lead-Specific Conversational Co-pilot (4 cols) */}
