@@ -13,8 +13,8 @@ const QUICK_PROMPTS = [
   'What should I emphasize on the call?',
   'Make my reply more assertive.',
   "What are the customer's biggest concerns?",
-  'Should I call this lead now?',
   'Give me 3 talking points for the call.',
+  'How should I handle the objection?',
 ];
 
 export const LeadCopilotChat: React.FC<LeadCopilotChatProps> = ({
@@ -24,11 +24,13 @@ export const LeadCopilotChat: React.FC<LeadCopilotChatProps> = ({
   const [messages, setMessages] = useState<ChatMessage[]>(lead.chatHistory || []);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Sync state if lead changes
   useEffect(() => {
     setMessages(lead.chatHistory || []);
+    setChatError(null);
   }, [lead]);
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export const LeadCopilotChat: React.FC<LeadCopilotChatProps> = ({
     const text = questionText.trim();
     if (!text || isLoading) return;
 
+    setChatError(null);
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
@@ -59,8 +62,9 @@ export const LeadCopilotChat: React.FC<LeadCopilotChatProps> = ({
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, assistantMsg]);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Chat error:', err);
+      setChatError(err?.message || 'Failed to connect to AI Co-pilot. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -162,6 +166,11 @@ export const LeadCopilotChat: React.FC<LeadCopilotChatProps> = ({
               <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-400" />
               <span>Analyzing lead context...</span>
             </div>
+          </div>
+        )}
+        {chatError && (
+          <div className="rounded-xl border border-rose-500/30 bg-rose-950/40 p-3 text-xs text-rose-300">
+            {chatError}
           </div>
         )}
         <div ref={chatEndRef} />
