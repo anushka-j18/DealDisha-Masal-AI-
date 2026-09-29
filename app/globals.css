@@ -2,15 +2,16 @@
 
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: #080c14;
+    --foreground: #f8fafc;
   }
 
   body {
-    background-color: #030712;
+    background-color: #080c14;
     color: #f8fafc;
-    font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+    font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
@@ -21,7 +22,7 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: #0b0f19;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -31,4 +32,10 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
+}
+
+/* Accessible focus outline */
+*:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
 }
