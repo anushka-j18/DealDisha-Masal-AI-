@@ -1,5 +1,46 @@
 [
   {
+    "id": "lead-1790708657590-zyst",
+    "customerName": "Ananya Roy",
+    "location": "Tellapur, Hyderabad",
+    "propertyRequirement": "4BHK gated villa",
+    "budget": "₹3.5 Crores",
+    "buyingTimeline": "Within 1 month",
+    "customerMessage": "Urgent inquiry: Relocating to Hyderabad next month. Need a 4BHK gated villa in Tellapur area. Budget 3.5Cr max. Need immediate possession.",
+    "createdAt": "2026-09-29T19:04:17.590Z",
+    "updatedAt": "2026-09-29T19:04:17.590Z",
+    "analysis": {
+      "summary": "Ananya Roy is looking for 4BHK gated villa in Tellapur, Hyderabad with a ₹3.5 Crores budget and Within 1 month timeline.",
+      "intent": "Immediate Purchase Intent — High readiness to close.",
+      "keyRequirements": [
+        "Property Config: 4BHK gated villa",
+        "Target Submarket: Tellapur, Hyderabad",
+        "Stated Budget: ₹3.5 Crores",
+        "Decision Timeline: Within 1 month"
+      ],
+      "objections": [
+        "Requires confirmation of inventory matching ₹3.5 Crores budget ceiling",
+        "Needs verification of location proximity & possession timeline"
+      ],
+      "recommendedNextAction": "Call Ananya Roy today to schedule a site visit for 4BHK gated villa.",
+      "suggestedResponse": "Hi Ananya Roy, thank you for reaching out to DealDisha! I have verified options for 4BHK gated villa in Tellapur, Hyderabad matching your ₹3.5 Crores budget. When is a good time for a brief call today to review floor plans?",
+      "priority": "HOT",
+      "score": 87,
+      "nextMove": {
+        "what": "Call Ananya Roy today to schedule a site visit for 4BHK gated villa.",
+        "why": "Ananya Roy has specified a budget of ₹3.5 Crores with a buying timeline of Within 1 month in Tellapur, Hyderabad.",
+        "when": "Today",
+        "callStrategy": [
+          "Confirm preferred sub-locality within Tellapur, Hyderabad",
+          "Present properties fitting ₹3.5 Crores budget limit",
+          "Address timeline expectations (Within 1 month)",
+          "Lock in a concrete date for an in-person site visit"
+        ]
+      }
+    },
+    "chatHistory": []
+  },
+  {
     "id": "lead-1790704967222-flm7",
     "customerName": "Priya Shah",
     "location": "Mumbai",
@@ -49,7 +90,7 @@
     "buyingTimeline": "Within 1 month",
     "customerMessage": "Looking for a 2BHK for my family near Whitefield. My budget is around 80L. We are planning to buy soon. Prefer something close to metro and schools.",
     "createdAt": "2026-09-29T15:56:23.669Z",
-    "updatedAt": "2026-09-29T18:01:07.391Z",
+    "updatedAt": "2026-09-29T18:59:10.431Z",
     "analysis": {
       "summary": "High-urgency family buyer looking for a 2BHK in Whitefield, Bangalore with an ₹80L budget and immediate buying intent.",
       "intent": "Immediate Purchase Intent — High readiness to close.",
@@ -104,6 +145,18 @@
         "role": "assistant",
         "content": "Key points to emphasize for Rahul Sharma:\n• Highlight available 2BHK apartment near Whitefield options in Bangalore strictly matching their ₹80 Lakhs budget.\n• Directly address their Within 1 month decision timeline.\n• Focus on key decision drivers: location convenience, ready possession, and amenities.",
         "timestamp": "2026-09-29T18:01:07.391Z"
+      },
+      {
+        "id": "msg-1790708350430-2y6r",
+        "role": "user",
+        "content": "How soon can we arrange a site visit?",
+        "timestamp": "2026-09-29T18:59:10.430Z"
+      },
+      {
+        "id": "msg-1790708350431-z326",
+        "role": "assistant",
+        "content": "For Rahul Sharma (2BHK apartment near Whitefield in Bangalore, ₹80 Lakhs): Focus on establishing trust, presenting 2-3 verified options, and securing a site visit commitment for their Within 1 month timeline.",
+        "timestamp": "2026-09-29T18:59:10.431Z"
       }
     ]
   },

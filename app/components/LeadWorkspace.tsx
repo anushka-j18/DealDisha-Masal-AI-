@@ -7,19 +7,13 @@ import { SuggestedResponseCard } from './SuggestedResponseCard';
 import { LeadCopilotChat } from './LeadCopilotChat';
 import {
   ArrowLeft,
-  Flame,
-  Zap,
-  Snowflake,
-  MapPin,
-  Calendar,
-  DollarSign,
-  Building,
+  Building2,
   AlertTriangle,
-  CheckCircle2,
   MessageSquare,
   FileText,
-  User,
   Trash2,
+  PhoneCall,
+  Zap,
 } from 'lucide-react';
 
 interface LeadWorkspaceProps {
@@ -40,239 +34,187 @@ export const LeadWorkspace: React.FC<LeadWorkspaceProps> = ({
   const score = analysis?.score || 50;
 
   let priorityBadge = (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-300 border border-amber-500/30">
-      <Zap className="h-3.5 w-3.5 fill-amber-400/20" /> WARM LEAD
+    <span className="inline-flex items-center gap-1 font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded text-xs border border-amber-300">
+      WARM
     </span>
   );
 
   if (priority === 'HOT') {
     priorityBadge = (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/20 px-3 py-1 text-xs font-bold text-rose-300 border border-rose-500/40 animate-pulse">
-        <Flame className="h-3.5 w-3.5 fill-rose-400" /> HOT LEAD
+      <span className="inline-flex items-center gap-1 font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded text-xs border border-rose-300">
+        HOT
       </span>
     );
   } else if (priority === 'COLD') {
     priorityBadge = (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-500/15 px-3 py-1 text-xs font-bold text-cyan-300 border border-cyan-500/30">
-        <Snowflake className="h-3.5 w-3.5" /> COLD LEAD
+      <span className="inline-flex items-center gap-1 font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-xs border border-slate-300">
+        COLD
       </span>
     );
   }
 
-  let scoreColor = 'text-amber-400 border-amber-500/40 bg-amber-500/10';
-  if (score >= 80) scoreColor = 'text-rose-400 border-rose-500/40 bg-rose-500/10';
-  else if (score < 50) scoreColor = 'text-cyan-400 border-cyan-500/40 bg-cyan-500/10';
+  // Generate requirements chips/tags
+  const reqChips = analysis?.keyRequirements || [
+    lead.propertyRequirement,
+    lead.location,
+    lead.budget,
+    lead.buyingTimeline,
+  ];
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-300">
-      {/* Navigation Top Bar */}
+    <div className="space-y-5 pb-12 animate-in fade-in duration-150">
+      {/* Back Navigation Bar */}
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back to Dashboard</span>
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span>Leads</span>
         </button>
 
         <button
           onClick={() => onDelete(lead.id)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs font-medium text-slate-400 hover:border-rose-500/40 hover:bg-rose-950/30 hover:text-rose-300 transition-colors"
+          className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-rose-600 transition-colors"
         >
           <Trash2 className="h-3.5 w-3.5" />
-          <span>Delete Lead</span>
+          <span>Delete lead</span>
         </button>
       </div>
 
-      {/* Customer Header Snapshot Card */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl backdrop-blur-md">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-bold text-lg shadow-md shadow-indigo-600/20">
-              {lead.customerName.charAt(0)}
+      {/* Lead Workspace Header Card */}
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                {lead.customerName}
+              </h2>
+              {priorityBadge}
+              <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                Score {score} / 100
+              </span>
             </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-2xl font-bold text-white tracking-tight">
-                  {lead.customerName}
-                </h2>
-                {priorityBadge}
-              </div>
-              <p className="mt-1 text-sm font-medium text-indigo-300 flex items-center gap-1.5">
-                <Building className="h-4 w-4" />
-                <span>{lead.propertyRequirement}</span>
-              </p>
-            </div>
+            <p className="text-xs font-medium text-slate-600 flex items-center gap-1.5 mt-1">
+              <Building2 className="h-3.5 w-3.5 text-slate-400" />
+              <span>{lead.propertyRequirement} · {lead.location}</span>
+            </p>
           </div>
 
-          {/* Quick Metrics & Sales Action Bar */}
-          <div className="flex flex-col gap-3 border-t border-slate-800 pt-4 lg:border-t-0 lg:pt-0 lg:items-end">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-1.5 text-center">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Budget
-                </span>
-                <span className="text-xs font-extrabold text-emerald-400 flex items-center justify-center gap-0.5 mt-0.5">
-                  <DollarSign className="h-3 w-3" />
-                  {lead.budget}
-                </span>
-              </div>
-
-              <div className="rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-1.5 text-center">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Location
-                </span>
-                <span className="text-xs font-semibold text-slate-200 flex items-center justify-center gap-1 mt-0.5">
-                  <MapPin className="h-3 w-3 text-indigo-400" />
-                  {lead.location}
-                </span>
-              </div>
-
-              <div className="rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-1.5 text-center">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Timeline
-                </span>
-                <span className="text-xs font-semibold text-slate-200 flex items-center justify-center gap-1 mt-0.5">
-                  <Calendar className="h-3 w-3 text-amber-400" />
-                  {lead.buyingTimeline}
-                </span>
-              </div>
-
-              <div className="rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-1.5 text-center">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Score
-                </span>
-                <span className={`text-xs font-black px-2 py-0.5 rounded-lg border ${scoreColor} inline-block mt-0.5`}>
-                  {score} <span className="text-[9px] font-medium text-slate-400">/ 100</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Salesperson Action Bar */}
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <a
-                href={`tel:${lead.customerName}`}
-                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-md hover:bg-emerald-500 transition-all"
-              >
-                <span>Call {lead.customerName}</span>
-              </a>
-              <button
-                onClick={() => {
-                  const el = document.getElementById('suggested-response-section');
-                  el?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 hover:text-white transition-all"
-              >
-                <MessageSquare className="h-3.5 w-3.5 text-indigo-400" />
-                <span>Suggested Response</span>
-              </button>
-            </div>
+          {/* Quick Action Area */}
+          <div className="flex items-center gap-2">
+            <a
+              href={`tel:${lead.customerName}`}
+              className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition-colors"
+            >
+              <PhoneCall className="h-3.5 w-3.5" />
+              <span>Call Customer</span>
+            </a>
+            <button
+              onClick={() => {
+                const el = document.getElementById('suggested-response-section');
+                el?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              <MessageSquare className="h-3.5 w-3.5 text-indigo-600" />
+              <span>Send Response</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Main Split Grid: Left Workspace (65%) & Right Co-pilot Chat (35%) */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Left Column: Intelligence Workspace (8 cols) */}
-        <div className="space-y-6 lg:col-span-7 xl:col-span-8">
-          {/* FEATURE 6: Signature "NEXT MOVE" Card */}
+      {/* Main Grid: Left Column (60%) & Right Column (40%) */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        {/* Left Column (7 cols) */}
+        <div className="space-y-5 lg:col-span-7">
+          {/* AI SUMMARY */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mb-2">
+              <FileText className="h-3.5 w-3.5 text-indigo-600" />
+              AI SUMMARY
+            </span>
+            <p className="text-xs text-slate-800 leading-relaxed font-normal">
+              {analysis?.summary || `${lead.customerName} is inquiring about ${lead.propertyRequirement} in ${lead.location} with a ${lead.budget} budget and ${lead.buyingTimeline} timeline.`}
+            </p>
+          </div>
+
+          {/* CUSTOMER INTENT */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mb-2">
+              <Zap className="h-3.5 w-3.5 text-amber-500" />
+              CUSTOMER INTENT
+            </span>
+            <div className="rounded-md bg-amber-50 border border-amber-200 p-2.5 text-xs font-semibold text-amber-900">
+              {analysis?.intent || 'High readiness to purchase — active inquiry.'}
+            </div>
+          </div>
+
+          {/* KEY REQUIREMENTS CHIPS */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-2.5">
+              KEY REQUIREMENTS
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {reqChips.map((chip, idx) => (
+                <span
+                  key={idx}
+                  className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-800 border border-slate-200"
+                >
+                  {chip}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* OBJECTIONS */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mb-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-rose-500" />
+              OBJECTIONS & CONCERNS
+            </span>
+            <ul className="space-y-1.5">
+              {analysis?.objections && analysis.objections.length > 0 ? (
+                analysis.objections.map((obj, idx) => (
+                  <li key={idx} className="text-xs text-rose-800 bg-rose-50 p-2 rounded-md border border-rose-200 flex items-start gap-2 font-medium">
+                    <span className="h-1.5 w-1.5 rounded-full bg-rose-500 mt-1.5 shrink-0" />
+                    <span>{obj}</span>
+                  </li>
+                ))
+              ) : (
+                <li className="text-xs text-slate-500">No major objections identified.</li>
+              )}
+            </ul>
+          </div>
+
+          {/* Original Inquiry */}
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-2">
+              ORIGINAL CUSTOMER MESSAGE
+            </span>
+            <p className="text-xs text-slate-700 bg-slate-50 p-3 rounded-md border border-slate-200 italic leading-relaxed">
+              &quot;{lead.customerMessage}&quot;
+            </p>
+          </div>
+        </div>
+
+        {/* Right Column (5 cols) */}
+        <div className="space-y-5 lg:col-span-5">
+          {/* NEXT MOVE HERO */}
           <NextMoveCard
             nextMove={analysis?.nextMove}
             fallbackAction={analysis?.recommendedNextAction}
           />
 
-          {/* Customer Inquiry Text Box */}
-          <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 backdrop-blur-md">
-            <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-              <MessageSquare className="h-4 w-4 text-indigo-400" />
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                Original Inbound Customer Inquiry
-              </h4>
-            </div>
-            <p className="mt-3 text-sm text-slate-300 leading-relaxed font-sans bg-slate-950/80 p-4 rounded-lg border border-slate-950 italic">
-              &quot;{lead.customerMessage}&quot;
-            </p>
-          </div>
-
-          {/* Executive AI Analysis & Intent Breakdown */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* AI Summary Card */}
-            <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4 backdrop-blur-md">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <FileText className="h-3.5 w-3.5 text-indigo-400" />
-                AI Lead Executive Summary
-              </span>
-              <p className="mt-2 text-xs text-slate-300 leading-relaxed">
-                {analysis?.summary || 'Analysis pending...'}
-              </p>
-            </div>
-
-            {/* Customer Intent Card */}
-            <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4 backdrop-blur-md">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                <Zap className="h-3.5 w-3.5 text-amber-400" />
-                Customer Intent Level
-              </span>
-              <p className="mt-2 text-xs font-semibold text-amber-300 bg-amber-950/40 p-2.5 rounded-lg border border-amber-500/20">
-                {analysis?.intent || 'Intent analyzed.'}
-              </p>
-            </div>
-          </div>
-
-          {/* Key Requirements & Objections Grid */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* Key Requirements */}
-            <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4 backdrop-blur-md">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-2.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                Extracted Key Requirements
-              </span>
-              <ul className="space-y-2">
-                {analysis?.keyRequirements && analysis.keyRequirements.length > 0 ? (
-                  analysis.keyRequirements.map((req, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-xs text-slate-200">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
-                      <span>{req}</span>
-                    </li>
-                  ))
-                ) : (
-                  <li className="text-xs text-slate-400">No specific requirements listed.</li>
-                )}
-              </ul>
-            </div>
-
-            {/* Objections / Concerns */}
-            <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4 backdrop-blur-md">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-2.5">
-                <AlertTriangle className="h-3.5 w-3.5 text-rose-400" />
-                Identified Objections & Hesitations
-              </span>
-              <ul className="space-y-2">
-                {analysis?.objections && analysis.objections.length > 0 ? (
-                  analysis.objections.map((obj, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-xs text-rose-200 bg-rose-950/20 p-2 rounded-lg border border-rose-500/10">
-                      <span className="h-1.5 w-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0" />
-                      <span>{obj}</span>
-                    </li>
-                  ))
-                ) : (
-                  <li className="text-xs text-slate-400">No major objections identified.</li>
-                )}
-              </ul>
-            </div>
-          </div>
-
-          {/* Suggested Customer Response Card */}
+          {/* SUGGESTED RESPONSE */}
           <div id="suggested-response-section">
             <SuggestedResponseCard
               response={analysis?.suggestedResponse}
               customerName={lead.customerName}
             />
           </div>
-        </div>
 
-        {/* Right Column: Lead-Specific Conversational Co-pilot (4 cols) */}
-        <div className="lg:col-span-5 xl:col-span-4 h-[680px]">
+          {/* AI ASSISTANT ("Ask about this lead") */}
           <LeadCopilotChat
             lead={lead}
             onSendMessage={onSendMessage}

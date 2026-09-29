@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Flame, Zap, Snowflake, Users, TrendingUp, Compass } from 'lucide-react';
 import { Lead } from '@/lib/types';
+import { Users, Flame, Clock, Award } from 'lucide-react';
 
 interface MetricsOverviewProps {
   leads: Lead[];
@@ -17,119 +17,105 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
 }) => {
   const total = leads.length;
   const hotCount = leads.filter((l) => l.analysis?.priority === 'HOT').length;
-  const warmCount = leads.filter((l) => l.analysis?.priority === 'WARM').length;
-  const coldCount = leads.filter((l) => l.analysis?.priority === 'COLD').length;
+  const followUpsToday = leads.filter(
+    (l) => l.analysis?.nextMove?.when === 'Today' || l.buyingTimeline.toLowerCase().includes('1 month')
+  ).length;
 
-  const hotPercentage = total > 0 ? Math.round((hotCount / total) * 100) : 0;
+  const avgScore =
+    total > 0
+      ? Math.round(leads.reduce((acc, l) => acc + (l.analysis?.score || 0), 0) / total)
+      : 0;
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {/* Total Leads Card */}
-      <button
-        onClick={() => onSelectPriority('ALL')}
-        className={`group relative overflow-hidden rounded-xl border p-4 text-left transition-all ${
-          activePriorityFilter === 'ALL'
-            ? 'border-indigo-500/50 bg-indigo-950/20 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-500/50'
-            : 'border-slate-800 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900'
-        }`}
-      >
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Total Leads
-          </span>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400 group-hover:scale-110 transition-transform">
-            <Users className="h-4 w-4" />
-          </div>
+    <div className="space-y-4">
+      {/* Editorial Header Greeting */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-200 pb-4">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+            Good morning, Anushka
+          </h2>
+          <p className="text-xs text-slate-500 font-medium">
+            Here&apos;s where your pipeline stands today.
+          </p>
         </div>
-        <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-2xl font-bold text-white">{total}</span>
-          <span className="text-xs text-slate-400">active in pipeline</span>
-        </div>
-        <div className="mt-3 flex items-center gap-1.5 text-xs text-indigo-400 font-medium">
-          <Compass className="h-3.5 w-3.5" />
-          <span>Real-time AI Intake</span>
-        </div>
-      </button>
 
-      {/* Hot Leads Card */}
-      <button
-        onClick={() => onSelectPriority('HOT')}
-        className={`group relative overflow-hidden rounded-xl border p-4 text-left transition-all ${
-          activePriorityFilter === 'HOT'
-            ? 'border-rose-500/50 bg-rose-950/30 shadow-lg shadow-rose-500/10 ring-1 ring-rose-500/50'
-            : 'border-slate-800 bg-slate-900/60 hover:border-rose-500/30 hover:bg-slate-900'
-        }`}
-      >
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
-            Hot Leads
-          </span>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/15 text-rose-400 group-hover:scale-110 transition-transform">
-            <Flame className="h-4 w-4 fill-rose-500/20" />
-          </div>
+        <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-md self-start sm:self-auto">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Real-time AI Pipeline Active</span>
         </div>
-        <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-2xl font-bold text-rose-300">{hotCount}</span>
-          <span className="text-xs text-rose-400/80 font-medium">({hotPercentage}% of total)</span>
-        </div>
-        <div className="mt-3 flex items-center gap-1 text-xs text-rose-400 font-semibold">
-          <TrendingUp className="h-3.5 w-3.5" />
-          <span>Immediate Call Required</span>
-        </div>
-      </button>
+      </div>
 
-      {/* Warm Leads Card */}
-      <button
-        onClick={() => onSelectPriority('WARM')}
-        className={`group relative overflow-hidden rounded-xl border p-4 text-left transition-all ${
-          activePriorityFilter === 'WARM'
-            ? 'border-amber-500/50 bg-amber-950/30 shadow-lg shadow-amber-500/10 ring-1 ring-amber-500/50'
-            : 'border-slate-800 bg-slate-900/60 hover:border-amber-500/30 hover:bg-slate-900'
-        }`}
-      >
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
-            Warm Leads
-          </span>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400 group-hover:scale-110 transition-transform">
-            <Zap className="h-4 w-4 fill-amber-500/20" />
+      {/* Compact Summary Metric Blocks */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {/* Total Leads */}
+        <button
+          onClick={() => onSelectPriority('ALL')}
+          className={`flex items-center justify-between rounded-lg border p-3 text-left transition-all ${
+            activePriorityFilter === 'ALL'
+              ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-600'
+              : 'border-slate-200 bg-white hover:border-slate-300'
+          }`}
+        >
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+              Total Leads
+            </span>
+            <span className="text-xl font-bold text-slate-900 mt-0.5 block">{total}</span>
           </div>
-        </div>
-        <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-2xl font-bold text-amber-300">{warmCount}</span>
-          <span className="text-xs text-slate-400">1–3 months timeline</span>
-        </div>
-        <div className="mt-3 flex items-center gap-1 text-xs text-amber-400 font-medium">
-          <span>Active option comparison</span>
-        </div>
-      </button>
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+            <Users className="h-3.5 w-3.5" />
+          </div>
+        </button>
 
-      {/* Cold Leads Card */}
-      <button
-        onClick={() => onSelectPriority('COLD')}
-        className={`group relative overflow-hidden rounded-xl border p-4 text-left transition-all ${
-          activePriorityFilter === 'COLD'
-            ? 'border-cyan-500/50 bg-cyan-950/30 shadow-lg shadow-cyan-500/10 ring-1 ring-cyan-500/50'
-            : 'border-slate-800 bg-slate-900/60 hover:border-cyan-500/30 hover:bg-slate-900'
-        }`}
-      >
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-cyan-400 uppercase tracking-wider">
-            Cold Leads
-          </span>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/15 text-cyan-400 group-hover:scale-110 transition-transform">
-            <Snowflake className="h-4 w-4" />
+        {/* Hot Leads */}
+        <button
+          onClick={() => onSelectPriority('HOT')}
+          className={`flex items-center justify-between rounded-lg border p-3 text-left transition-all ${
+            activePriorityFilter === 'HOT'
+              ? 'border-rose-500 bg-rose-50/50 ring-1 ring-rose-500'
+              : 'border-slate-200 bg-white hover:border-rose-200'
+          }`}
+        >
+          <div>
+            <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider block flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
+              Hot Leads
+            </span>
+            <span className="text-xl font-bold text-rose-700 mt-0.5 block">{hotCount}</span>
+          </div>
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-rose-100 text-rose-600">
+            <Flame className="h-3.5 w-3.5" />
+          </div>
+        </button>
+
+        {/* Follow-ups Today */}
+        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 text-left">
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+              Follow-ups Today
+            </span>
+            <span className="text-xl font-bold text-slate-900 mt-0.5 block">{followUpsToday}</span>
+          </div>
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-50 text-amber-600">
+            <Clock className="h-3.5 w-3.5" />
           </div>
         </div>
-        <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-2xl font-bold text-cyan-300">{coldCount}</span>
-          <span className="text-xs text-slate-400">3–6+ mos timeline</span>
+
+        {/* Avg. Lead Score */}
+        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 text-left">
+          <div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+              Avg. Lead Score
+            </span>
+            <span className="text-xl font-bold text-slate-900 mt-0.5 block">
+              {avgScore} <span className="text-xs font-normal text-slate-400">/100</span>
+            </span>
+          </div>
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-50 text-indigo-600">
+            <Award className="h-3.5 w-3.5" />
+          </div>
         </div>
-        <div className="mt-3 flex items-center gap-1 text-xs text-cyan-400/80 font-medium">
-          <span>Scheduled drip nurture</span>
-        </div>
-      </button>
+      </div>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Sparkles, User, MapPin, Building, DollarSign, Clock, MessageSquare, Loader2, Zap, AlertCircle, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, User, MapPin, Building2, DollarSign, Clock, MessageSquare, Loader2, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 import { LeadIntakeInput } from '@/lib/types';
 
 interface LeadIntakeModalProps {
@@ -11,12 +11,20 @@ interface LeadIntakeModalProps {
   isSubmitting: boolean;
 }
 
+const ANALYSIS_STEPS = [
+  'Analyzing lead...',
+  'Understanding customer intent',
+  'Extracting key requirements',
+  'Identifying concerns & objections',
+  'Preparing signature Next Move',
+];
+
 const DEMO_PRESETS: { label: string; data: LeadIntakeInput }[] = [
   {
-    label: '⚡ Bangalore 2BHK ₹80L (Urgent)',
+    label: 'Bangalore 2BHK ₹80L',
     data: {
       customerName: 'Rahul Sharma',
-      location: 'Bangalore',
+      location: 'Whitefield, Bangalore',
       propertyRequirement: '2BHK apartment near Whitefield',
       budget: '₹80 Lakhs',
       buyingTimeline: 'Within 1 month',
@@ -24,36 +32,25 @@ const DEMO_PRESETS: { label: string; data: LeadIntakeInput }[] = [
     },
   },
   {
-    label: '✨ Mumbai Luxury 3BHK ₹2.2Cr',
+    label: 'Mumbai Luxury 3BHK ₹2.2Cr',
     data: {
       customerName: 'Priya Shah',
-      location: 'Mumbai',
-      propertyRequirement: '3BHK luxury apartment in Powai / Kanjurmarg',
+      location: 'Powai, Mumbai',
+      propertyRequirement: '3BHK luxury apartment in Powai',
       budget: '₹2.2 Crores',
       buyingTimeline: '1-3 months',
-      customerMessage: 'We are expanding our search for a spacious 3BHK in Powai or Kanjurmarg West. Budget up to 2.2Cr. Need a gated community with clubhouse and security. Buying in 1 to 3 months.',
+      customerMessage: 'We are expanding our search for a spacious 3BHK in Powai West. Budget up to 2.2Cr. Need a gated community with clubhouse and security.',
     },
   },
   {
-    label: '🏡 Hyderabad Villa Relocation ₹3.5Cr',
+    label: 'Hyderabad Villa ₹3.5Cr',
     data: {
       customerName: 'Ananya Roy',
-      location: 'Hyderabad',
-      propertyRequirement: 'Gated community villa in Gachibowli / Tellapur',
+      location: 'Tellapur, Hyderabad',
+      propertyRequirement: '4BHK gated villa',
       budget: '₹3.5 Crores',
       buyingTimeline: 'Within 1 month',
-      customerMessage: 'Urgent inquiry: Relocating to Hyderabad next month. Need a 4BHK gated villa in Tellapur or Gachibowli area. Budget 3.5Cr max. Need immediate possession.',
-    },
-  },
-  {
-    label: '📈 Gurgaon Plot Investment ₹1.5Cr',
-    data: {
-      customerName: 'Aman Verma',
-      location: 'Gurgaon',
-      propertyRequirement: 'Residential plot / villa in Sector 57 or 65',
-      budget: '₹1.5 Crores',
-      buyingTimeline: '3-6 months',
-      customerMessage: 'Hi, I am looking to invest in a residential plot or independent villa floor along Golf Course Extension Road (Sec 57/65). Budget around 1.5Cr. Planning in 3 to 6 months.',
+      customerMessage: 'Urgent inquiry: Relocating to Hyderabad next month. Need a 4BHK gated villa in Tellapur area. Budget 3.5Cr max. Need immediate possession.',
     },
   },
 ];
@@ -75,7 +72,18 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isSubmitting) {
+      setCurrentStepIndex(0);
+      interval = setInterval(() => {
+        setCurrentStepIndex((prev) => (prev < ANALYSIS_STEPS.length - 1 ? prev + 1 : prev));
+      }, 700);
+    }
+    return () => clearInterval(interval);
+  }, [isSubmitting]);
 
   if (!isOpen) return null;
 
@@ -85,11 +93,11 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
     if (!formData.customerName.trim()) {
       newErrors.customerName = 'Customer name is required';
     } else if (formData.customerName.trim().length < 2) {
-      newErrors.customerName = 'Customer name must be at least 2 characters';
+      newErrors.customerName = 'Name must be at least 2 characters';
     }
 
     if (!formData.location.trim()) {
-      newErrors.location = 'Target location is required';
+      newErrors.location = 'Location is required';
     }
 
     if (!formData.propertyRequirement.trim()) {
@@ -100,14 +108,10 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
       newErrors.budget = 'Budget is required';
     }
 
-    if (!formData.buyingTimeline) {
-      newErrors.buyingTimeline = 'Buying timeline selection is required';
-    }
-
     if (!formData.customerMessage.trim()) {
-      newErrors.customerMessage = 'Customer message / inquiry text is required';
+      newErrors.customerMessage = 'Customer message is required';
     } else if (formData.customerMessage.trim().length < 10) {
-      newErrors.customerMessage = 'Customer message should contain at least 10 characters for AI analysis';
+      newErrors.customerMessage = 'Message should contain at least 10 characters';
     }
 
     setErrors(newErrors);
@@ -117,10 +121,7 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear specific field error when user types
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
     setSubmitError(null);
   };
 
@@ -130,53 +131,42 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
     setSubmitError(null);
   };
 
-  const handleSubmitForm = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     try {
       await onSubmit(formData);
-      setSubmitSuccess(true);
-      setTimeout(() => {
-        setSubmitSuccess(false);
-        setFormData({
-          customerName: '',
-          location: '',
-          propertyRequirement: '',
-          budget: '',
-          buyingTimeline: 'Within 1 month',
-          customerMessage: '',
-        });
-      }, 1000);
+      setFormData({
+        customerName: '',
+        location: '',
+        propertyRequirement: '',
+        budget: '',
+        buyingTimeline: 'Within 1 month',
+        customerMessage: '',
+      });
     } catch (err: any) {
-      setSubmitError(err?.message || 'Failed to submit lead. Please check network connection.');
+      setSubmitError(err?.message || 'Failed to submit lead.');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/80 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white">Add Inbound Property Lead</h2>
-              <p className="text-xs text-slate-400">
-                AI will immediately analyze intent, score urgency, and generate your Next Move.
-              </p>
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="relative w-full max-w-xl rounded-xl border border-slate-200 bg-white p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Add Inbound Opportunity</h2>
+            <p className="text-xs text-slate-500 font-medium">
+              Create a lead record for AI intent analysis &amp; Next Move calculation.
+            </p>
           </div>
           <button
             onClick={onClose}
             disabled={isSubmitting}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -184,34 +174,25 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
 
         {/* Global Error Banner */}
         {submitError && (
-          <div className="mt-4 flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-950/40 p-3 text-xs text-rose-300">
-            <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+          <div className="flex items-center gap-2 rounded-md border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800">
+            <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
             <span>{submitError}</span>
           </div>
         )}
 
-        {/* Success Alert */}
-        {submitSuccess && (
-          <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-950/40 p-3 text-xs text-emerald-300">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-            <span>Lead successfully submitted and analyzed! Loading workspace...</span>
-          </div>
-        )}
-
-        {/* Quick Demo Presets */}
-        <div className="mt-4">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            <Zap className="h-3.5 w-3.5 text-amber-400" />
-            Quick Demo Presets:
+        {/* Quick Presets */}
+        <div>
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+            Quick Demo Fill:
           </span>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {DEMO_PRESETS.map((preset, idx) => (
               <button
                 key={idx}
                 type="button"
-                onClick={() => handleSelectPreset(preset.data)}
                 disabled={isSubmitting}
-                className="rounded-lg border border-slate-800 bg-slate-950/80 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:border-indigo-500/50 hover:bg-indigo-950/30 hover:text-indigo-200 transition-all disabled:opacity-50"
+                onClick={() => handleSelectPreset(preset.data)}
+                className="rounded border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 transition-all"
               >
                 {preset.label}
               </button>
@@ -219,168 +200,184 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
           </div>
         </div>
 
-        {/* Lead Intake Form */}
-        <form onSubmit={handleSubmitForm} className="mt-5 space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* Customer Name */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
-                <User className="h-3.5 w-3.5 text-slate-400" /> Customer Name *
-              </label>
-              <input
-                type="text"
-                name="customerName"
-                value={formData.customerName}
-                onChange={handleChange}
-                disabled={isSubmitting}
-                placeholder="e.g. Rahul Sharma"
-                className={`w-full rounded-lg border bg-slate-950 px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors ${
-                  errors.customerName
-                    ? 'border-rose-500 focus:ring-rose-500'
-                    : 'border-slate-800 focus:border-indigo-500 focus:ring-indigo-500'
-                }`}
-              />
-              {errors.customerName && (
-                <p className="mt-1 text-[11px] font-medium text-rose-400">{errors.customerName}</p>
-              )}
-            </div>
+        {/* Structured Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* SECTION 1: CUSTOMER */}
+          <div className="space-y-3">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block border-b border-slate-100 pb-1">
+              CUSTOMER
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Customer Name *
+                </label>
+                <input
+                  type="text"
+                  name="customerName"
+                  value={formData.customerName}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  placeholder="e.g. Rahul Sharma"
+                  className={`w-full rounded-md border px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none transition-colors ${
+                    errors.customerName ? 'border-rose-500' : 'border-slate-200 focus:border-indigo-600'
+                  }`}
+                />
+                {errors.customerName && <p className="text-[10px] text-rose-600 mt-0.5 font-medium">{errors.customerName}</p>}
+              </div>
 
-            {/* Target Location */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5 text-slate-400" /> Target Location *
-              </label>
-              <input
-                type="text"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                disabled={isSubmitting}
-                placeholder="e.g. Whitefield, Bangalore"
-                className={`w-full rounded-lg border bg-slate-950 px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors ${
-                  errors.location
-                    ? 'border-rose-500 focus:ring-rose-500'
-                    : 'border-slate-800 focus:border-indigo-500 focus:ring-indigo-500'
-                }`}
-              />
-              {errors.location && (
-                <p className="mt-1 text-[11px] font-medium text-rose-400">{errors.location}</p>
-              )}
-            </div>
-
-            {/* Property Requirement */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
-                <Building className="h-3.5 w-3.5 text-slate-400" /> Property Requirement *
-              </label>
-              <input
-                type="text"
-                name="propertyRequirement"
-                value={formData.propertyRequirement}
-                onChange={handleChange}
-                disabled={isSubmitting}
-                placeholder="e.g. 2BHK apartment near Whitefield"
-                className={`w-full rounded-lg border bg-slate-950 px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors ${
-                  errors.propertyRequirement
-                    ? 'border-rose-500 focus:ring-rose-500'
-                    : 'border-slate-800 focus:border-indigo-500 focus:ring-indigo-500'
-                }`}
-              />
-              {errors.propertyRequirement && (
-                <p className="mt-1 text-[11px] font-medium text-rose-400">{errors.propertyRequirement}</p>
-              )}
-            </div>
-
-            {/* Budget */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
-                <DollarSign className="h-3.5 w-3.5 text-slate-400" /> Budget *
-              </label>
-              <input
-                type="text"
-                name="budget"
-                value={formData.budget}
-                onChange={handleChange}
-                disabled={isSubmitting}
-                placeholder="e.g. ₹80 Lakhs"
-                className={`w-full rounded-lg border bg-slate-950 px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors ${
-                  errors.budget
-                    ? 'border-rose-500 focus:ring-rose-500'
-                    : 'border-slate-800 focus:border-indigo-500 focus:ring-indigo-500'
-                }`}
-              />
-              {errors.budget && (
-                <p className="mt-1 text-[11px] font-medium text-rose-400">{errors.budget}</p>
-              )}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Target Location *
+                </label>
+                <input
+                  type="text"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  placeholder="e.g. Whitefield, Bangalore"
+                  className={`w-full rounded-md border px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none transition-colors ${
+                    errors.location ? 'border-rose-500' : 'border-slate-200 focus:border-indigo-600'
+                  }`}
+                />
+                {errors.location && <p className="text-[10px] text-rose-600 mt-0.5 font-medium">{errors.location}</p>}
+              </div>
             </div>
           </div>
 
-          {/* Buying Timeline */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5 text-slate-400" /> Buying Timeline *
-            </label>
-            <select
-              name="buyingTimeline"
-              value={formData.buyingTimeline}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="Within 1 month">Within 1 month (Immediate Purchase Intent)</option>
-              <option value="1-3 months">1 to 3 months (Active Comparison)</option>
-              <option value="3-6 months">3 to 6 months (Exploratory Phase)</option>
-              <option value="6+ months">6+ months / Future Planning</option>
-            </select>
+          {/* SECTION 2: PROPERTY */}
+          <div className="space-y-3">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block border-b border-slate-100 pb-1">
+              PROPERTY
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Property Requirement *
+                </label>
+                <input
+                  type="text"
+                  name="propertyRequirement"
+                  value={formData.propertyRequirement}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  placeholder="e.g. 2BHK apartment near metro"
+                  className={`w-full rounded-md border px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none transition-colors ${
+                    errors.propertyRequirement ? 'border-rose-500' : 'border-slate-200 focus:border-indigo-600'
+                  }`}
+                />
+                {errors.propertyRequirement && <p className="text-[10px] text-rose-600 mt-0.5 font-medium">{errors.propertyRequirement}</p>}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Budget *
+                </label>
+                <input
+                  type="text"
+                  name="budget"
+                  value={formData.budget}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  placeholder="e.g. ₹80 Lakhs"
+                  className={`w-full rounded-md border px-3 py-1.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none transition-colors ${
+                    errors.budget ? 'border-rose-500' : 'border-slate-200 focus:border-indigo-600'
+                  }`}
+                />
+                {errors.budget && <p className="text-[10px] text-rose-600 mt-0.5 font-medium">{errors.budget}</p>}
+              </div>
+            </div>
           </div>
 
-          {/* Customer Message / Inquiry */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
-              <MessageSquare className="h-3.5 w-3.5 text-slate-400" /> Customer Message / Inquiry *
-            </label>
-            <textarea
-              name="customerMessage"
-              rows={4}
-              value={formData.customerMessage}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              placeholder="Paste exact WhatsApp inquiry, web lead message, or phone notes..."
-              className={`w-full rounded-lg border bg-slate-950 px-3.5 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors resize-none ${
-                errors.customerMessage
-                  ? 'border-rose-500 focus:ring-rose-500'
-                  : 'border-slate-800 focus:border-indigo-500 focus:ring-indigo-500'
-              }`}
-            />
-            {errors.customerMessage && (
-              <p className="mt-1 text-[11px] font-medium text-rose-400">{errors.customerMessage}</p>
-            )}
+          {/* SECTION 3: TIMELINE */}
+          <div className="space-y-2">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block border-b border-slate-100 pb-1">
+              TIMELINE
+            </span>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Buying Timeline *
+              </label>
+              <select
+                name="buyingTimeline"
+                value={formData.buyingTimeline}
+                onChange={handleChange}
+                disabled={isSubmitting}
+                className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-indigo-600 focus:outline-none"
+              >
+                <option value="Within 1 month">Within 1 month (Immediate Purchase)</option>
+                <option value="1-3 months">1 to 3 months (Active Comparison)</option>
+                <option value="3-6 months">3 to 6 months (Planning Phase)</option>
+                <option value="6+ months">6+ months (Exploratory)</option>
+              </select>
+            </div>
           </div>
 
-          {/* Submit Controls */}
-          <div className="flex items-center justify-end gap-3 pt-2">
+          {/* SECTION 4: CONVERSATION */}
+          <div className="space-y-2">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block border-b border-slate-100 pb-1">
+              CONVERSATION
+            </span>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Customer Message / Inquiry *
+              </label>
+              <textarea
+                name="customerMessage"
+                rows={3}
+                value={formData.customerMessage}
+                onChange={handleChange}
+                disabled={isSubmitting}
+                placeholder="Paste WhatsApp message, web inquiry, or phone notes..."
+                className={`w-full rounded-md border px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none transition-colors resize-none ${
+                  errors.customerMessage ? 'border-rose-500' : 'border-slate-200 focus:border-indigo-600'
+                }`}
+              />
+              {errors.customerMessage && <p className="text-[10px] text-rose-600 mt-0.5 font-medium">{errors.customerMessage}</p>}
+            </div>
+          </div>
+
+          {/* Step Progress Treatment while AI is analyzing */}
+          {isSubmitting && (
+            <div className="rounded-md bg-indigo-50 border border-indigo-100 p-3 space-y-1.5">
+              <div className="flex items-center gap-2 text-xs font-semibold text-indigo-900">
+                <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+                <span>{ANALYSIS_STEPS[currentStepIndex]}</span>
+              </div>
+              <div className="w-full bg-indigo-200 h-1 rounded-full overflow-hidden">
+                <div
+                  className="bg-indigo-600 h-full transition-all duration-300"
+                  style={{ width: `${((currentStepIndex + 1) / ANALYSIS_STEPS.length) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Submit Action */}
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="rounded-lg border border-slate-800 bg-slate-950 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-slate-900 transition-colors"
+              className="rounded-md border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 hover:from-indigo-500 hover:to-indigo-400 transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 transition-colors disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin text-white" />
-                  <span>Analyzing with AI...</span>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Analyzing...</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4" />
-                  <span>Analyze & Save Lead</span>
+                  <span>Analyze Lead</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
                 </>
               )}
             </button>
