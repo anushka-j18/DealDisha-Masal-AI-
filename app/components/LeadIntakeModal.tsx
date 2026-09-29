@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Sparkles, User, MapPin, Building, DollarSign, Clock, MessageSquare, Loader2, Zap } from 'lucide-react';
+import { X, Sparkles, User, MapPin, Building, DollarSign, Clock, MessageSquare, Loader2, Zap, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { LeadIntakeInput } from '@/lib/types';
 
 interface LeadIntakeModalProps {
@@ -73,32 +73,88 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
     customerMessage: '',
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<boolean>(false);
+
   if (!isOpen) return null;
 
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.customerName.trim()) {
+      newErrors.customerName = 'Customer name is required';
+    } else if (formData.customerName.trim().length < 2) {
+      newErrors.customerName = 'Customer name must be at least 2 characters';
+    }
+
+    if (!formData.location.trim()) {
+      newErrors.location = 'Target location is required';
+    }
+
+    if (!formData.propertyRequirement.trim()) {
+      newErrors.propertyRequirement = 'Property requirement is required';
+    }
+
+    if (!formData.budget.trim()) {
+      newErrors.budget = 'Budget is required';
+    }
+
+    if (!formData.buyingTimeline) {
+      newErrors.buyingTimeline = 'Buying timeline selection is required';
+    }
+
+    if (!formData.customerMessage.trim()) {
+      newErrors.customerMessage = 'Customer message / inquiry text is required';
+    } else if (formData.customerMessage.trim().length < 10) {
+      newErrors.customerMessage = 'Customer message should contain at least 10 characters for AI analysis';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear specific field error when user types
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+    setSubmitError(null);
   };
 
   const handleSelectPreset = (preset: LeadIntakeInput) => {
     setFormData(preset);
+    setErrors({});
+    setSubmitError(null);
   };
 
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.customerName || !formData.customerMessage) return;
-    await onSubmit(formData);
-    // Reset form
-    setFormData({
-      customerName: '',
-      location: '',
-      propertyRequirement: '',
-      budget: '',
-      buyingTimeline: 'Within 1 month',
-      customerMessage: '',
-    });
+    setSubmitError(null);
+
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      await onSubmit(formData);
+      setSubmitSuccess(true);
+      setTimeout(() => {
+        setSubmitSuccess(false);
+        setFormData({
+          customerName: '',
+          location: '',
+          propertyRequirement: '',
+          budget: '',
+          buyingTimeline: 'Within 1 month',
+          customerMessage: '',
+        });
+      }, 1000);
+    } catch (err: any) {
+      setSubmitError(err?.message || 'Failed to submit lead. Please check network connection.');
+    }
   };
 
   return (
@@ -126,7 +182,23 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
           </button>
         </div>
 
-        {/* Quick Presets */}
+        {/* Global Error Banner */}
+        {submitError && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-950/40 p-3 text-xs text-rose-300">
+            <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+            <span>{submitError}</span>
+          </div>
+        )}
+
+        {/* Success Alert */}
+        {submitSuccess && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-950/40 p-3 text-xs text-emerald-300">
+            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+            <span>Lead successfully submitted and analyzed! Loading workspace...</span>
+          </div>
+        )}
+
+        {/* Quick Demo Presets */}
         <div className="mt-4">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
             <Zap className="h-3.5 w-3.5 text-amber-400" />
@@ -138,7 +210,8 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
                 key={idx}
                 type="button"
                 onClick={() => handleSelectPreset(preset.data)}
-                className="rounded-lg border border-slate-800 bg-slate-950/80 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:border-indigo-500/50 hover:bg-indigo-950/30 hover:text-indigo-200 transition-all"
+                disabled={isSubmitting}
+                className="rounded-lg border border-slate-800 bg-slate-950/80 px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:border-indigo-500/50 hover:bg-indigo-950/30 hover:text-indigo-200 transition-all disabled:opacity-50"
               >
                 {preset.label}
               </button>
@@ -157,15 +230,22 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
               <input
                 type="text"
                 name="customerName"
-                required
                 value={formData.customerName}
                 onChange={handleChange}
+                disabled={isSubmitting}
                 placeholder="e.g. Rahul Sharma"
-                className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className={`w-full rounded-lg border bg-slate-950 px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors ${
+                  errors.customerName
+                    ? 'border-rose-500 focus:ring-rose-500'
+                    : 'border-slate-800 focus:border-indigo-500 focus:ring-indigo-500'
+                }`}
               />
+              {errors.customerName && (
+                <p className="mt-1 text-[11px] font-medium text-rose-400">{errors.customerName}</p>
+              )}
             </div>
 
-            {/* Location */}
+            {/* Target Location */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5 text-slate-400" /> Target Location *
@@ -173,12 +253,19 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
               <input
                 type="text"
                 name="location"
-                required
                 value={formData.location}
                 onChange={handleChange}
+                disabled={isSubmitting}
                 placeholder="e.g. Whitefield, Bangalore"
-                className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className={`w-full rounded-lg border bg-slate-950 px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors ${
+                  errors.location
+                    ? 'border-rose-500 focus:ring-rose-500'
+                    : 'border-slate-800 focus:border-indigo-500 focus:ring-indigo-500'
+                }`}
               />
+              {errors.location && (
+                <p className="mt-1 text-[11px] font-medium text-rose-400">{errors.location}</p>
+              )}
             </div>
 
             {/* Property Requirement */}
@@ -189,12 +276,19 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
               <input
                 type="text"
                 name="propertyRequirement"
-                required
                 value={formData.propertyRequirement}
                 onChange={handleChange}
+                disabled={isSubmitting}
                 placeholder="e.g. 2BHK apartment near Whitefield"
-                className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className={`w-full rounded-lg border bg-slate-950 px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors ${
+                  errors.propertyRequirement
+                    ? 'border-rose-500 focus:ring-rose-500'
+                    : 'border-slate-800 focus:border-indigo-500 focus:ring-indigo-500'
+                }`}
               />
+              {errors.propertyRequirement && (
+                <p className="mt-1 text-[11px] font-medium text-rose-400">{errors.propertyRequirement}</p>
+              )}
             </div>
 
             {/* Budget */}
@@ -205,12 +299,19 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
               <input
                 type="text"
                 name="budget"
-                required
                 value={formData.budget}
                 onChange={handleChange}
+                disabled={isSubmitting}
                 placeholder="e.g. ₹80 Lakhs"
-                className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className={`w-full rounded-lg border bg-slate-950 px-3.5 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors ${
+                  errors.budget
+                    ? 'border-rose-500 focus:ring-rose-500'
+                    : 'border-slate-800 focus:border-indigo-500 focus:ring-indigo-500'
+                }`}
               />
+              {errors.budget && (
+                <p className="mt-1 text-[11px] font-medium text-rose-400">{errors.budget}</p>
+              )}
             </div>
           </div>
 
@@ -223,12 +324,13 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
               name="buyingTimeline"
               value={formData.buyingTimeline}
               onChange={handleChange}
+              disabled={isSubmitting}
               className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2 text-sm text-slate-200 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
-              <option value="Within 1 month">Within 1 month (Immediate)</option>
-              <option value="1-3 months">1 to 3 months</option>
-              <option value="3-6 months">3 to 6 months</option>
-              <option value="6+ months">6+ months / Exploratory</option>
+              <option value="Within 1 month">Within 1 month (Immediate Purchase Intent)</option>
+              <option value="1-3 months">1 to 3 months (Active Comparison)</option>
+              <option value="3-6 months">3 to 6 months (Exploratory Phase)</option>
+              <option value="6+ months">6+ months / Future Planning</option>
             </select>
           </div>
 
@@ -240,15 +342,22 @@ export const LeadIntakeModal: React.FC<LeadIntakeModalProps> = ({
             <textarea
               name="customerMessage"
               rows={4}
-              required
               value={formData.customerMessage}
               onChange={handleChange}
+              disabled={isSubmitting}
               placeholder="Paste exact WhatsApp inquiry, web lead message, or phone notes..."
-              className="w-full rounded-lg border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
+              className={`w-full rounded-lg border bg-slate-950 px-3.5 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 transition-colors resize-none ${
+                errors.customerMessage
+                  ? 'border-rose-500 focus:ring-rose-500'
+                  : 'border-slate-800 focus:border-indigo-500 focus:ring-indigo-500'
+              }`}
             />
+            {errors.customerMessage && (
+              <p className="mt-1 text-[11px] font-medium text-rose-400">{errors.customerMessage}</p>
+            )}
           </div>
 
-          {/* Submit Button */}
+          {/* Submit Controls */}
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
