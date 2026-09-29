@@ -26,18 +26,24 @@ export interface ChatMessage {
   timestamp: string;
 }
 
+/**
+ * DealDisha Core Lead Data Model
+ */
 export interface Lead {
-  id: string;
-  customerName: string;
-  location: string;
-  propertyRequirement: string;
-  budget: string;
-  buyingTimeline: string;
-  customerMessage: string;
-  createdAt: string;      // ISO string
-  updatedAt: string;
-  analysis?: AIAnalysis;
-  chatHistory?: ChatMessage[];
+  id: string;                  // Unique identifier
+  customerName: string;        // Customer name
+  location: string;            // Preferred location (e.g. Whitefield, Bangalore)
+  propertyRequirement: string; // Property requirement (e.g. 2BHK apartment)
+  budget: string;              // Budget (e.g. ₹80 Lakhs)
+  buyingTimeline: string;      // Buying timeline (e.g. Within 1 month)
+  customerMessage: string;     // Customer message / raw inquiry
+  analysis?: AIAnalysis;       // AI analysis fields (summary, intent, keyRequirements, objections, recommendedNextAction, suggestedResponse)
+  score?: number;              // Lead score (0 to 100)
+  priority?: Priority;         // Lead priority: HOT | WARM | COLD
+  nextMove?: NextMove;         // Signature Next Move recommendation (what, why, when, callStrategy)
+  createdAt: string;           // Creation timestamp (ISO string)
+  updatedAt: string;           // Update timestamp (ISO string)
+  chatHistory?: ChatMessage[]; // Lead-specific AI conversation transcript
 }
 
 export interface LeadIntakeInput {
