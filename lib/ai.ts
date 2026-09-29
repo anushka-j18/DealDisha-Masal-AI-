@@ -153,11 +153,32 @@ Please analyze this lead and provide output according to the JSON format below:
     const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsedData = JSON.parse(cleanedText) as AIAnalysis;
 
-    // Validate fields
-    if (parsedData.summary && parsedData.priority && parsedData.nextMove) {
+    // Strict validation of all 8 required AI fields + nextMove object
+    const hasValidSummary = typeof parsedData.summary === 'string' && parsedData.summary.length > 0;
+    const hasValidIntent = typeof parsedData.intent === 'string' && parsedData.intent.length > 0;
+    const hasValidRequirements = Array.isArray(parsedData.keyRequirements) && parsedData.keyRequirements.length > 0;
+    const hasValidObjections = Array.isArray(parsedData.objections);
+    const hasValidNextAction = typeof parsedData.recommendedNextAction === 'string' && parsedData.recommendedNextAction.length > 0;
+    const hasValidResponse = typeof parsedData.suggestedResponse === 'string' && parsedData.suggestedResponse.length > 0;
+    const hasValidPriority = ['HOT', 'WARM', 'COLD'].includes(parsedData.priority);
+    const hasValidScore = typeof parsedData.score === 'number' && parsedData.score >= 0 && parsedData.score <= 100;
+    const hasValidNextMove = parsedData.nextMove && typeof parsedData.nextMove.what === 'string' && typeof parsedData.nextMove.why === 'string';
+
+    if (
+      hasValidSummary &&
+      hasValidIntent &&
+      hasValidRequirements &&
+      hasValidObjections &&
+      hasValidNextAction &&
+      hasValidResponse &&
+      hasValidPriority &&
+      hasValidScore &&
+      hasValidNextMove
+    ) {
       return parsedData;
     }
-    
+
+    console.warn('[DealDisha AI] Output failed strict validation. Utilizing grounded fallback engine.');
     return generateFallbackAnalysis(input);
   } catch (err) {
     console.error('[DealDisha AI Analysis Error]:', err);
