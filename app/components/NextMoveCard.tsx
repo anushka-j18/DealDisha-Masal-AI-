@@ -38,31 +38,36 @@ export const NextMoveCard: React.FC<NextMoveCardProps> = ({ nextMove, fallbackAc
         </div>
       </div>
 
-      {/* Main Hero: WHAT TO DO */}
+      {/* Main Hero: NEXT MOVE (WHAT TO DO) */}
       <div className="mt-4">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest block">
-          WHAT TO DO
+        <span className="text-xs font-bold text-amber-400 uppercase tracking-widest block">
+          NEXT MOVE
         </span>
-        <h3 className="mt-1 text-xl font-bold text-white tracking-tight leading-snug">
+        <h3 className="mt-1 text-xl font-extrabold text-white tracking-tight leading-snug">
           {what}
         </h3>
       </div>
 
       {/* Rationale: WHY */}
-      <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-        <span className="text-xs font-semibold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-          <ShieldCheck className="h-3.5 w-3.5" />
-          WHY THIS MOVE MATTERS
-        </span>
-        <p className="mt-1.5 text-sm text-slate-300 leading-relaxed font-normal">
+      <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            WHY
+          </span>
+          <span className="text-[11px] font-semibold text-slate-400">
+            WHEN: <strong className="text-amber-300">{when}</strong>
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-slate-300 leading-relaxed font-normal">
           {why}
         </p>
       </div>
 
-      {/* Tactical Call Strategy */}
+      {/* Tactical Talking Points */}
       <div className="mt-4">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-          CONCISE CALL STRATEGY
+        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
+          CONCISE TALKING POINTS ({callStrategy.length})
         </span>
         <ul className="space-y-2">
           {callStrategy.map((item, idx) => (
