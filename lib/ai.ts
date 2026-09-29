@@ -4,20 +4,29 @@ import { AIAnalysis, LeadIntakeInput, Lead } from './types';
 // Obtain API Key from environment variable
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.API_KEY || '';
 
-// System prompt enforcing strict grounding in lead data
+// System prompt enforcing strict grounding & explainable scoring in lead data
 const LEAD_ANALYSIS_SYSTEM_PROMPT = `
 You are DealDisha's Lead Intelligence Engine — an elite AI assistant for real estate sales teams.
 Your objective is to analyze inbound property buyer leads and return structured JSON sales intelligence.
 
-RULES FOR ANALYSIS:
-1. Ground your analysis strictly in the provided customer name, location, requirement, budget, timeline, and customer message.
+RULES FOR SCORING & PRIORITIZATION:
+1. Base your analysis STRICTLY on the provided customer name, location, requirement, budget, timeline, and customer message.
 2. DO NOT invent facts, amenities, or budget figures that are not stated.
-3. Compute an objective Lead Score (0 to 100) and Priority (HOT, WARM, COLD) based on:
-   - Timeline Urgency: < 1 month (HOT), 1-3 months (HOT/WARM), 3-6 months (WARM), > 6 months (COLD)
-   - Specificity of location, configuration, and budget match.
+3. Compute an OBJECTIVE, EXPLAINABLE Lead Score (0 to 100) and Priority (HOT, WARM, COLD) by evaluating these 6 specific factors:
+   - BUYING TIMELINE (Max 35 pts): <1 month / immediate = +35; 1-3 months = +25; 3-6 months = +15; >6 months = +5
+   - BUDGET CLARITY (Max 20 pts): Specific numeric budget (e.g. ₹80L, ₹2.2Cr) = +20; flexible/range = +10; missing = +5
+   - REQUIREMENT CLARITY (Max 20 pts): Specific configuration & location (e.g. 2BHK in Whitefield near metro) = +20; general = +10
+   - PURCHASE INTENT & URGENCY (Max 15 pts): Explicit mention of relocation, site visit request, family purchase, or ready possession = +15; casual browsing = +5
+   - OBJECTIONS & CONCERNS (-5 to -15 pts): Serious structural constraints or tight budget limits reduce score slightly.
+
+PRIORITY MATRIX:
+- HOT (Score 80–100): Timeline <1 month, explicit budget & requirement, high purchase intent.
+- WARM (Score 50–79): Timeline 1–3 months, good fit requiring option comparison.
+- COLD (Score <50): Timeline 3–6+ months or casual exploratory inquiry.
+
 4. Formulate an actionable, high-impact "Next Move" for the real estate agent with:
    - "what": Direct action to execute (e.g. "Call the customer today to schedule a site visit.")
-   - "why": Fact-grounded rationale explaining why this action is essential.
+   - "why": Fact-grounded rationale citing budget, timeline, location facts.
    - "when": Urgency timeframe ("Today", "Within 24 Hours", "This Week", or "Next Week").
    - "callStrategy": 3-4 bullet points outlining key talking points for the call.
 5. Provide a professional, warm, non-pushy Suggested Response that the agent can copy and send directly.
@@ -25,78 +34,104 @@ RULES FOR ANALYSIS:
 OUTPUT FORMAT: Return ONLY valid, minified or formatted JSON without markdown code fences or backticks.
 `;
 
-// Helper for deterministic rule-based analysis fallback if API key is missing or fails
+// Deterministic 6-Factor Lead Scoring Algorithm for fallback execution
 export function generateFallbackAnalysis(input: LeadIntakeInput): AIAnalysis {
-  const msgLower = (input.customerMessage + ' ' + input.buyingTimeline).toLowerCase();
-  
-  let priority: 'HOT' | 'WARM' | 'COLD' = 'WARM';
-  let score = 65;
-  let when = 'Within 24 Hours';
-  let what = 'Call customer within 24 hours to confirm budget and location specs.';
+  const timelineLower = (input.buyingTimeline || '').toLowerCase();
+  const msgLower = (input.customerMessage || '').toLowerCase();
+  const reqLower = (input.propertyRequirement || '').toLowerCase();
+  const locLower = (input.location || '').toLowerCase();
+  const budgetLower = (input.budget || '').toLowerCase();
 
-  if (
-    msgLower.includes('1 month') ||
-    msgLower.includes('immediate') ||
-    msgLower.includes('urgent') ||
-    msgLower.includes('soon') ||
-    msgLower.includes('this week')
-  ) {
+  let score = 0;
+
+  // 1. BUYING TIMELINE SCORE (Max 35 pts)
+  if (timelineLower.includes('1 month') || timelineLower.includes('immediate') || msgLower.includes('relocat') || msgLower.includes('urgent')) {
+    score += 35;
+  } else if (timelineLower.includes('1-3') || timelineLower.includes('1 to 3') || timelineLower.includes('2 months')) {
+    score += 25;
+  } else if (timelineLower.includes('3-6') || timelineLower.includes('3 to 6')) {
+    score += 15;
+  } else {
+    score += 5;
+  }
+
+  // 2. BUDGET CLARITY (Max 20 pts)
+  if (budgetLower.includes('lakh') || budgetLower.includes('crore') || budgetLower.includes('cr') || budgetLower.includes('l') || /\d+/.test(budgetLower)) {
+    score += 20;
+  } else if (budgetLower.includes('flexible') || budgetLower.includes('open')) {
+    score += 12;
+  } else {
+    score += 5;
+  }
+
+  // 3. PROPERTY REQUIREMENT CLARITY (Max 20 pts)
+  if ((reqLower.includes('bhk') || reqLower.includes('villa') || reqLower.includes('plot') || reqLower.includes('shop')) && locLower.length > 3) {
+    score += 20;
+  } else {
+    score += 10;
+  }
+
+  // 4. PURCHASE INTENT & URGENCY (Max 15 pts)
+  if (msgLower.includes('buy') || msgLower.includes('site visit') || msgLower.includes('call') || msgLower.includes('family') || msgLower.includes('possession')) {
+    score += 15;
+  } else {
+    score += 7;
+  }
+
+  // 5. OBJECTIONS & CONCERNS ADJUSTMENT (-5 pts for high constraints)
+  if (msgLower.includes('max') || msgLower.includes('strict') || msgLower.includes('only')) {
+    score = Math.max(10, score - 3);
+  }
+
+  // Cap score range 0 to 100
+  score = Math.min(100, Math.max(10, score));
+
+  // Determine Priority
+  let priority: 'HOT' | 'WARM' | 'COLD' = 'WARM';
+  let when = 'Within 24 Hours';
+  let what = `Call ${input.customerName} to present curated options in ${input.location}.`;
+
+  if (score >= 80) {
     priority = 'HOT';
-    score = 92;
     when = 'Today';
     what = `Call ${input.customerName} today to schedule a site visit for ${input.propertyRequirement}.`;
-  } else if (
-    msgLower.includes('1-3 months') ||
-    msgLower.includes('2 months') ||
-    msgLower.includes('3 months')
-  ) {
-    priority = 'HOT';
-    score = 82;
-    when = 'Within 24 Hours';
-    what = `Send curated options for ${input.propertyRequirement} in ${input.location} and follow up tomorrow.`;
-  } else if (
-    msgLower.includes('6+') ||
-    msgLower.includes('exploring') ||
-    msgLower.includes('no hurry') ||
-    msgLower.includes('just looking')
-  ) {
+  } else if (score < 50) {
     priority = 'COLD';
-    score = 45;
     when = 'Next Week';
-    what = `Send general brochure for ${input.location} and schedule a low-priority follow up.`;
+    what = `Send property guide for ${input.location} and add to long-term follow-up list.`;
   }
 
   const reqs: string[] = [];
-  if (input.propertyRequirement) reqs.push(`Requirement: ${input.propertyRequirement}`);
-  if (input.location) reqs.push(`Target Location: ${input.location}`);
-  if (input.budget) reqs.push(`Budget: ${input.budget}`);
-  if (input.buyingTimeline) reqs.push(`Buying Timeline: ${input.buyingTimeline}`);
+  if (input.propertyRequirement) reqs.push(`Property Config: ${input.propertyRequirement}`);
+  if (input.location) reqs.push(`Target Submarket: ${input.location}`);
+  if (input.budget) reqs.push(`Stated Budget: ${input.budget}`);
+  if (input.buyingTimeline) reqs.push(`Decision Timeline: ${input.buyingTimeline}`);
 
   return {
-    summary: `${input.customerName} is looking for ${input.propertyRequirement} in ${input.location} with a budget of ${input.budget} on a ${input.buyingTimeline} timeline.`,
-    intent: priority === 'HOT' 
-      ? 'High readiness to purchase — immediate intent detected.' 
-      : priority === 'WARM' 
-      ? 'Active market comparison — good purchase potential.' 
-      : 'Exploratory interest — nurturing required.',
+    summary: `${input.customerName} is looking for ${input.propertyRequirement} in ${input.location} with a ${input.budget} budget and ${input.buyingTimeline} timeline.`,
+    intent: priority === 'HOT'
+      ? 'Immediate Purchase Intent — High readiness to close.'
+      : priority === 'WARM'
+      ? 'Active Market Comparison — Solid purchase potential.'
+      : 'Exploratory Interest — Long-term nurturing required.',
     keyRequirements: reqs,
     objections: [
-      `Need verification of inventory matching ${input.budget} budget limit`,
-      `Requires confirmation of location proximity & possession date`
+      `Requires confirmation of inventory matching ${input.budget} budget ceiling`,
+      `Needs verification of location proximity & possession timeline`
     ],
     recommendedNextAction: what,
-    suggestedResponse: `Hi ${input.customerName}, thank you for reaching out to DealDisha! I noticed your inquiry for ${input.propertyRequirement} in ${input.location} with a budget of ${input.budget}. We have top-rated options ready for viewings. When would be a convenient time for a brief call to discuss floor plans?`,
+    suggestedResponse: `Hi ${input.customerName}, thank you for reaching out to DealDisha! I have verified options for ${input.propertyRequirement} in ${input.location} matching your ${input.budget} budget. When is a good time for a brief call today to review floor plans?`,
     priority,
     score,
     nextMove: {
       what,
-      why: `${input.customerName} has specified a clear budget of ${input.budget} and a buying timeline of ${input.buyingTimeline} in ${input.location}.`,
+      why: `${input.customerName} has specified a budget of ${input.budget} with a buying timeline of ${input.buyingTimeline} in ${input.location}.`,
       when,
       callStrategy: [
         `Confirm preferred sub-locality within ${input.location}`,
-        `Present properties fitting ${input.budget} budget ceiling`,
+        `Present properties fitting ${input.budget} budget limit`,
         `Address timeline expectations (${input.buyingTimeline})`,
-        `Propose a concrete date for site inspection`
+        `Lock in a concrete date for an in-person site visit`
       ]
     }
   };
