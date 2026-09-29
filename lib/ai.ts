@@ -145,6 +145,12 @@ export async function analyzeLeadWithAI(input: LeadIntakeInput): Promise<AIAnaly
 
   try {
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+    
+    // Truncate extremely long customer messages (>3000 chars) to prevent token overflow
+    const sanitizedMsg = (input.customerMessage || '').length > 3000
+      ? input.customerMessage.substring(0, 3000) + '... (message truncated for analysis)'
+      : input.customerMessage;
+
     const prompt = `
 Lead Data:
 - Customer Name: ${input.customerName}
@@ -152,7 +158,7 @@ Lead Data:
 - Requirement: ${input.propertyRequirement}
 - Budget: ${input.budget}
 - Timeline: ${input.buyingTimeline}
-- Customer Message: "${input.customerMessage}"
+- Customer Message: "${sanitizedMsg}"
 
 Please analyze this lead and provide output according to the JSON format below:
 {
@@ -173,7 +179,8 @@ Please analyze this lead and provide output according to the JSON format below:
 }
 `;
 
-    const response = await ai.models.generateContent({
+    // 10-second timeout safety race
+    const aiCall = ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [
         { role: 'user', parts: [{ text: LEAD_ANALYSIS_SYSTEM_PROMPT + '\n\n' + prompt }] }
@@ -182,6 +189,12 @@ Please analyze this lead and provide output according to the JSON format below:
         responseMimeType: 'application/json'
       }
     });
+
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('AI Service Timeout')), 10000)
+    );
+
+    const response = await Promise.race([aiCall, timeoutPromise]);
 
     const responseText = response.text || '';
     // Clean up code blocks if present
