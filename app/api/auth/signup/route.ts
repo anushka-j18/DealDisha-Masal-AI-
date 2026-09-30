@@ -99,10 +99,10 @@ export async function POST(req: Request) {
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('API /api/auth/signup error:', error);
     return NextResponse.json(
-      { success: false, error: 'Server error creating user account.' },
+      { success: false, error: error?.message || 'Server error creating user account.' },
       { status: 500 }
     );
   }

@@ -90,10 +90,10 @@ export async function POST(req: Request) {
     });
 
     return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error('API /api/auth/login error:', error);
     return NextResponse.json(
-      { success: false, error: 'Server error authenticating user.' },
+      { success: false, error: error?.message || 'Server error authenticating user.' },
       { status: 500 }
     );
   }
