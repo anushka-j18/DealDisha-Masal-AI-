@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import { getSession, createSession } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
 
-export async function GET() {
-  const session = await getSession();
+export async function GET(req: Request) {
+  const session = await getSession(req);
   if (!session) {
-    return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const dbUser = await prisma.user.findUnique({
@@ -14,11 +14,11 @@ export async function GET() {
   });
 
   if (!dbUser) {
-    return NextResponse.json({ authenticated: true, user: session });
+    return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
   }
 
   return NextResponse.json({
-    authenticated: true,
+    success: true,
     user: {
       userId: dbUser.id,
       id: dbUser.id,
