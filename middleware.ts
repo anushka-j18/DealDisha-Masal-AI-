@@ -18,7 +18,7 @@ const PUBLIC_ROUTES = [
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow static Next.js assets, favicon, and public routes
+  // Allow static Next.js assets, favicon, and explicit public routes
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon.ico') ||
@@ -39,16 +39,19 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // If user is not authenticated and trying to access a protected route
+  // If user is authenticated and tries to access /login or /signup, redirect to /
+  if (isAuthenticated && (pathname === '/login' || pathname === '/signup')) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  // Require authentication for protected routes: /, /dashboard, /leads, /leads/[id], /add-lead, /profile, /settings, etc.
   if (!isAuthenticated) {
-    // For protected API endpoints, return JSON 401 Unauthorized
     if (pathname.startsWith('/api/')) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized. Please sign in.' },
         { status: 401 }
       );
     }
-    // For protected page routes (e.g. /), redirect to /login
     const loginUrl = new URL('/login', request.url);
     return NextResponse.redirect(loginUrl);
   }

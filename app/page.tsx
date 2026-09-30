@@ -11,11 +11,21 @@ import { LeadWorkspace } from './components/LeadWorkspace';
 import { Lead, LeadIntakeInput } from '@/lib/types';
 import { Loader2, Award, TrendingUp, ShieldCheck } from 'lucide-react';
 
-export default function DashboardPage() {
+interface DashboardPageProps {
+  initialTab?: 'overview' | 'leads' | 'insights';
+  initialLeadId?: string;
+  initialOpenModal?: boolean;
+}
+
+export default function DashboardPage({
+  initialTab = 'overview',
+  initialLeadId,
+  initialOpenModal = false,
+}: DashboardPageProps = {}) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [currentTab, setCurrentTab] = useState<'overview' | 'leads' | 'insights'>('overview');
+  const [currentTab, setCurrentTab] = useState<'overview' | 'leads' | 'insights'>(initialTab);
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,7 +34,7 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<'score_desc' | 'score_asc' | 'date_newest' | 'date_oldest'>('score_desc');
 
   // Intake Modal state
-  const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(false);
+  const [isIntakeModalOpen, setIsIntakeModalOpen] = useState(initialOpenModal);
   const [isSubmittingLead, setIsSubmittingLead] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -35,6 +45,10 @@ export default function DashboardPage() {
       const data = await res.json();
       if (data.success && Array.isArray(data.leads)) {
         setLeads(data.leads);
+        if (initialLeadId) {
+          const match = data.leads.find((l: Lead) => l.id === initialLeadId);
+          if (match) setSelectedLead(match);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch leads:', err);

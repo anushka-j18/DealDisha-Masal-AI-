@@ -215,7 +215,7 @@ describe('DealDisha Auth & Signup Suite', () => {
     });
   });
 
-  describe('Logout & Route Protection Suite', () => {
+  describe('Logout & Protected Routes Access Control', () => {
     it('11. should clear session cookie on logout request', async () => {
       const res = await logoutHandler();
       const data = await res.json();
@@ -228,12 +228,24 @@ describe('DealDisha Auth & Signup Suite', () => {
       expect(setCookieHeader).toContain('Max-Age=0');
     });
 
-    it('12. middleware should redirect unauthenticated requests to protected page to /login', async () => {
-      const req = new NextRequest('http://localhost:3000/');
-      const res = await middleware(req);
+    const protectedPaths = [
+      '/',
+      '/dashboard',
+      '/leads',
+      '/leads/lead-1',
+      '/add-lead',
+      '/profile',
+      '/settings',
+    ];
 
-      expect(res.status).toBe(307); // Temporary Redirect
-      expect(res.headers.get('location')).toContain('/login');
+    protectedPaths.forEach((path, idx) => {
+      it(`12.${idx + 1}. should redirect unauthenticated request to ${path} to /login`, async () => {
+        const req = new NextRequest(`http://localhost:3000${path}`);
+        const res = await middleware(req);
+
+        expect(res.status).toBe(307); // Temporary Redirect
+        expect(res.headers.get('location')).toContain('/login');
+      });
     });
 
     it('13. middleware should reject unauthenticated requests to protected API endpoints with 401', async () => {
