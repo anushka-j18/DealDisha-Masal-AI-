@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { getSession, createSession } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
 
-export async function GET() {
-  const session = await getSession();
+export async function GET(req?: Request) {
+  const session = await getSession(req);
   if (!session) {
     return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
   }
