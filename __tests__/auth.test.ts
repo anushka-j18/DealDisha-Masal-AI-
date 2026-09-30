@@ -4,6 +4,8 @@ import { prisma } from '../lib/prisma';
 import { POST as signupHandler } from '../app/api/auth/signup/route';
 import { POST as loginHandler } from '../app/api/auth/login/route';
 import { POST as logoutHandler } from '../app/api/auth/logout/route';
+import { GET as getLeadsHandler, POST as createLeadHandler } from '../app/api/leads/route';
+import { GET as getSingleLeadHandler, DELETE as deleteLeadHandler } from '../app/api/leads/[id]/route';
 import { middleware } from '../middleware';
 import { NextRequest } from 'next/server';
 
@@ -256,6 +258,64 @@ describe('DealDisha Auth & Signup Suite', () => {
       expect(res.status).toBe(401);
       expect(data.success).toBe(false);
       expect(data.error).toContain('Unauthorized');
+    });
+  });
+
+  describe('User Lead Association & Isolation Suite', () => {
+    it('14. should associate lead with authenticated user and ignore frontend spoofed userId', async () => {
+      // Create User A
+      const emailA = `usera_${Date.now()}@dealdisha.io`;
+      const signupReq = new Request('http://localhost:3000/api/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: 'User A',
+          email: emailA,
+          password: 'Password123!',
+          confirmPassword: 'Password123!',
+        }),
+      });
+      const signupRes = await signupHandler(signupReq);
+      const signupData = await signupRes.json();
+      const userA = signupData.user;
+
+      // Login User A
+      const loginReq = new Request('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: emailA,
+          password: 'Password123!',
+        }),
+      });
+      const loginRes = await loginHandler(loginReq);
+      const cookieHeader = loginRes.headers.get('set-cookie');
+      const sessionToken = cookieHeader?.split('dealdisha_session=')[1]?.split(';')[0];
+
+      // User A creates lead with spoofed frontend userId ("fake-user-id")
+      const createReq = new Request('http://localhost:3000/api/leads', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: `dealdisha_session=${sessionToken}`,
+        },
+        body: JSON.stringify({
+          customerName: 'Rahul Varma',
+          location: 'Indiranagar, Bangalore',
+          propertyRequirement: '3BHK Flat',
+          budget: '₹1.5 Crores',
+          buyingTimeline: 'Within 1 month',
+          customerMessage: 'Urgent buyer looking for 3BHK flat in Indiranagar.',
+          userId: 'fake-spoofed-user-id', // Frontend spoof attempt
+        }),
+      });
+
+      const createRes = await createLeadHandler(createReq);
+      const createData = await createRes.json();
+
+      expect(createRes.status).toBe(201);
+      expect(createData.success).toBe(true);
+      // Verify server ignored fake-spoofed-user-id and assigned real userA.id from session
+      expect(createData.lead.userId).toBe(userA.id);
+      expect(createData.lead.userId).not.toBe('fake-spoofed-user-id');
     });
   });
 });

@@ -38,7 +38,7 @@ export async function createSession(user: { id: string; email: string; name: str
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });
   } catch {
-    // Graceful fallback for non-request environments (e.g. unit tests)
+    // Graceful fallback for non-request environments
   }
 
   return token;
@@ -57,10 +57,27 @@ export async function verifyToken(token: string): Promise<UserSession | null> {
   }
 }
 
-export async function getSession(): Promise<UserSession | null> {
+export async function getSession(req?: Request): Promise<UserSession | null> {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    let token: string | undefined;
+
+    if (req) {
+      const cookieHeader = req.headers.get('cookie');
+      if (cookieHeader) {
+        const match = cookieHeader.match(new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`));
+        if (match) token = match[1];
+      }
+    }
+
+    if (!token) {
+      try {
+        const cookieStore = await cookies();
+        token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+      } catch {
+        // cookies() called outside Next request context
+      }
+    }
+
     if (!token) return null;
     return await verifyToken(token);
   } catch {

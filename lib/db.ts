@@ -233,6 +233,7 @@ const SEED_LEADS: Lead[] = [
 function mapRecordToLead(record: any): Lead {
   return {
     id: record.id,
+    userId: record.userId,
     customerName: record.customerName,
     location: record.location,
     propertyRequirement: record.propertyRequirement,
@@ -250,9 +251,10 @@ function mapRecordToLead(record: any): Lead {
 }
 
 // Helper to convert application Lead model to Prisma record input
-function mapLeadToRecord(lead: Lead) {
+function mapLeadToRecord(lead: Lead, userId: string) {
   return {
     id: lead.id,
+    userId: userId || lead.userId || 'system-user',
     customerName: lead.customerName,
     location: lead.location,
     propertyRequirement: lead.propertyRequirement,
@@ -269,51 +271,68 @@ function mapLeadToRecord(lead: Lead) {
   };
 }
 
-// Automatically seed SQLite database if table is empty
-async function seedDatabaseIfNeeded(): Promise<void> {
+// Automatically seed SQLite database for a specific user if their lead list is empty
+async function seedDatabaseForUserIfNeeded(userId: string): Promise<void> {
+  if (!userId) return;
   try {
-    const count = await prisma.lead.count();
-    if (count === 0) {
+    const userCount = await prisma.user.count({ where: { id: userId } });
+    if (userCount === 0) return;
+
+    const leadCount = await prisma.lead.count({ where: { userId } });
+    if (leadCount === 0) {
       for (const lead of SEED_LEADS) {
+        const userSeedLead = {
+          ...lead,
+          id: `${userId}-${lead.id}`,
+          userId,
+        };
         await prisma.lead.create({
-          data: mapLeadToRecord(lead),
+          data: mapLeadToRecord(userSeedLead, userId),
         });
       }
     }
   } catch (error) {
-    console.error('Error seeding SQLite database:', error);
+    console.error('Error seeding user leads in SQLite:', error);
   }
 }
 
 export const db = {
-  async getAllLeads(): Promise<Lead[]> {
-    await seedDatabaseIfNeeded();
-    const records = await prisma.lead.findMany();
+  async getAllLeads(userId?: string): Promise<Lead[]> {
+    if (userId) {
+      await seedDatabaseForUserIfNeeded(userId);
+    }
+    const records = await prisma.lead.findMany({
+      where: userId ? { userId } : undefined,
+    });
     const leads = records.map(mapRecordToLead);
     // Sort leads by numeric score descending by default
     return leads.sort((a, b) => (b.analysis?.score || b.score || 0) - (a.analysis?.score || a.score || 0));
   },
 
-  async getLeadById(id: string): Promise<Lead | undefined> {
-    await seedDatabaseIfNeeded();
-    const record = await prisma.lead.findUnique({
-      where: { id },
+  async getLeadById(id: string, userId?: string): Promise<Lead | undefined> {
+    if (userId) {
+      await seedDatabaseForUserIfNeeded(userId);
+    }
+    const record = await prisma.lead.findFirst({
+      where: userId ? { id, userId } : { id },
     });
     if (!record) return undefined;
     return mapRecordToLead(record);
   },
 
-  async createLead(lead: Lead): Promise<Lead> {
-    await seedDatabaseIfNeeded();
+  async createLead(lead: Lead, userId: string): Promise<Lead> {
+    if (!userId) {
+      throw new Error('userId is required to create a lead.');
+    }
+    await seedDatabaseForUserIfNeeded(userId);
     const created = await prisma.lead.create({
-      data: mapLeadToRecord(lead),
+      data: mapLeadToRecord(lead, userId),
     });
     return mapRecordToLead(created);
   },
 
-  async updateLead(id: string, updatedFields: Partial<Lead>): Promise<Lead | undefined> {
-    await seedDatabaseIfNeeded();
-    const existing = await this.getLeadById(id);
+  async updateLead(id: string, updatedFields: Partial<Lead>, userId?: string): Promise<Lead | undefined> {
+    const existing = await this.getLeadById(id, userId);
     if (!existing) return undefined;
 
     const mergedLead: Lead = {
@@ -324,14 +343,16 @@ export const db = {
 
     const updated = await prisma.lead.update({
       where: { id },
-      data: mapLeadToRecord(mergedLead),
+      data: mapLeadToRecord(mergedLead, userId || existing.userId || 'system-user'),
     });
 
     return mapRecordToLead(updated);
   },
 
-  async deleteLead(id: string): Promise<boolean> {
-    await seedDatabaseIfNeeded();
+  async deleteLead(id: string, userId?: string): Promise<boolean> {
+    const existing = await this.getLeadById(id, userId);
+    if (!existing) return false;
+
     try {
       await prisma.lead.delete({
         where: { id },
@@ -342,8 +363,8 @@ export const db = {
     }
   },
 
-  async addChatMessage(leadId: string, role: 'user' | 'assistant', content: string): Promise<Lead | undefined> {
-    const lead = await this.getLeadById(leadId);
+  async addChatMessage(leadId: string, role: 'user' | 'assistant', content: string, userId?: string): Promise<Lead | undefined> {
+    const lead = await this.getLeadById(leadId, userId);
     if (!lead) return undefined;
 
     const newMsg = {
@@ -354,6 +375,6 @@ export const db = {
     };
 
     const updatedHistory = [...(lead.chatHistory || []), newMsg];
-    return this.updateLead(leadId, { chatHistory: updatedHistory });
+    return this.updateLead(leadId, { chatHistory: updatedHistory }, userId);
   }
 };

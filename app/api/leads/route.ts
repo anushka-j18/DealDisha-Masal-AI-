@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { analyzeLeadWithAI } from '@/lib/ai';
-import { Lead, LeadIntakeInput } from '@/lib/types';
+import { db } from '../../../lib/db';
+import { analyzeLeadWithAI } from '../../../lib/ai';
+import { Lead, LeadIntakeInput } from '../../../lib/types';
+import { getSession } from '../../../lib/auth';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const leads = await db.getAllLeads();
+    const session = await getSession(req);
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const leads = await db.getAllLeads(session.userId);
     return NextResponse.json({ success: true, leads });
   } catch (error) {
     console.error('API /api/leads GET error:', error);
@@ -18,6 +24,11 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const session = await getSession(req);
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     let body: LeadIntakeInput;
     try {
       body = await req.json();
@@ -46,9 +57,10 @@ export async function POST(req: Request) {
     // Step 2: AI Lead Analysis
     const analysis = await analyzeLeadWithAI(body);
 
-    // Step 3: Construct Lead Record
+    // Step 3: Construct Lead Record (Do NOT trust frontend userId; use server session.userId)
     const newLead: Lead = {
       id: `lead-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      userId: session.userId,
       customerName: body.customerName.trim(),
       location: body.location?.trim() || 'Not Specified',
       propertyRequirement: body.propertyRequirement?.trim() || 'General Property Inquiry',
@@ -63,8 +75,8 @@ export async function POST(req: Request) {
       chatHistory: []
     };
 
-    // Step 4: Persist Lead in Database
-    const savedLead = await db.createLead(newLead);
+    // Step 4: Persist Lead in Database for logged-in user
+    const savedLead = await db.createLead(newLead, session.userId);
 
     // Step 5: Return Created Lead Response
     return NextResponse.json(

@@ -31,6 +31,7 @@ export interface ChatMessage {
  */
 export interface Lead {
   id: string;                  // Unique identifier
+  userId?: string;             // User identifier owner
   customerName: string;        // Customer name
   location: string;            // Preferred location (e.g. Whitefield, Bangalore)
   propertyRequirement: string; // Property requirement (e.g. 2BHK apartment)
