@@ -13,19 +13,19 @@ export async function POST(req: Request) {
       );
     }
 
-    const lead = db.getLeadById(leadId);
+    const lead = await db.getLeadById(leadId);
     if (!lead) {
       return NextResponse.json({ success: false, error: 'Lead not found.' }, { status: 404 });
     }
 
     // Save user message to lead history
-    db.addChatMessage(leadId, 'user', message);
+    await db.addChatMessage(leadId, 'user', message);
 
     // Get context-grounded AI answer
     const aiResponseText = await askLeadCopilot(lead, message);
 
     // Save AI assistant response to lead history
-    const updatedLead = db.addChatMessage(leadId, 'assistant', aiResponseText);
+    const updatedLead = await db.addChatMessage(leadId, 'assistant', aiResponseText);
 
     return NextResponse.json({
       success: true,

@@ -5,7 +5,7 @@ import { Lead, LeadIntakeInput } from '@/lib/types';
 
 export async function GET() {
   try {
-    const leads = db.getAllLeads();
+    const leads = await db.getAllLeads();
     return NextResponse.json({ success: true, leads });
   } catch (error) {
     console.error('API /api/leads GET error:', error);
@@ -57,12 +57,14 @@ export async function POST(req: Request) {
       customerMessage: body.customerMessage.trim(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      score: analysis.score,
+      priority: analysis.priority,
       analysis,
       chatHistory: []
     };
 
     // Step 4: Persist Lead in Database
-    const savedLead = db.createLead(newLead);
+    const savedLead = await db.createLead(newLead);
 
     // Step 5: Return Created Lead Response
     return NextResponse.json(

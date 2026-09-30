@@ -1,0 +1,28 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Lead {
+  id                  String   @id
+  customerName        String
+  location            String
+  propertyRequirement String
+  budget              String
+  buyingTimeline      String
+  customerMessage     String
+  score               Int?
+  priority            String?  // 'HOT' | 'WARM' | 'COLD'
+  analysis            String?  // JSON stringified AIAnalysis object
+  nextMove            String?  // JSON stringified NextMove object
+  chatHistory         String?  // JSON stringified ChatMessage[] array
+  createdAt           String
+  updatedAt           String
+}

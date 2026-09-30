@@ -1,8 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import { prisma } from './prisma';
 import { Lead } from './types';
-
-const DATA_FILE_PATH = path.join(process.cwd(), 'dealdisha_leads.json');
 
 // Default initial realistic leads for Indian B2B Real Estate sales
 const SEED_LEADS: Lead[] = [
@@ -16,6 +13,8 @@ const SEED_LEADS: Lead[] = [
     customerMessage: 'Looking for a 2BHK for my family near Whitefield. My budget is around 80L. We are planning to buy soon. Prefer something close to metro and schools.',
     createdAt: new Date(Date.now() - 3600000 * 2).toISOString(), // 2 hours ago
     updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+    score: 94,
+    priority: 'HOT',
     analysis: {
       summary: 'High-urgency family buyer looking for a 2BHK in Whitefield, Bangalore with an ₹80L budget and immediate buying intent.',
       intent: 'Immediate Purchase Intent — High readiness to close.',
@@ -71,6 +70,8 @@ const SEED_LEADS: Lead[] = [
     customerMessage: 'We are expanding our search for a spacious 3BHK in Powai or Kanjurmarg West. Budget up to 2.2Cr. Need a gated community with clubhouse and security. Buying in 1 to 3 months.',
     createdAt: new Date(Date.now() - 3600000 * 6).toISOString(),
     updatedAt: new Date(Date.now() - 3600000 * 6).toISOString(),
+    score: 86,
+    priority: 'HOT',
     analysis: {
       summary: 'High-value premium buyer interested in a 3BHK luxury unit in Powai/Kanjurmarg with a ₹2.2Cr budget.',
       intent: 'Active Comparison Phase — Moderate to High intent.',
@@ -111,6 +112,8 @@ const SEED_LEADS: Lead[] = [
     customerMessage: 'Hi, I am looking to invest in a residential plot or independent villa floor along Golf Course Extension Road (Sec 57/65). Budget around 1.5Cr. Planning in 3 to 6 months.',
     createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
     updatedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+    score: 68,
+    priority: 'WARM',
     analysis: {
       summary: 'Investor/end-user seeking plot or villa floor on Golf Course Ext Rd with a ₹1.5Cr budget on a 3-6 month horizon.',
       intent: 'Evaluation & Market Research Phase.',
@@ -151,6 +154,8 @@ const SEED_LEADS: Lead[] = [
     customerMessage: 'Urgent inquiry: Relocating to Hyderabad next month. Need a 4BHK gated villa in Tellapur or Gachibowli area. Budget 3.5Cr max. Need immediate possession.',
     createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
     updatedAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+    score: 97,
+    priority: 'HOT',
     analysis: {
       summary: 'High-urgency relocation buyer needing immediate possession 4BHK villa in Gachibowli/Tellapur with a ₹3.5Cr budget.',
       intent: 'Immediate Relocation Necessity — Extremely High Intent.',
@@ -191,6 +196,8 @@ const SEED_LEADS: Lead[] = [
     customerMessage: 'Looking around for commercial shops or studio apartments in Noida Expressway for passive rental income. Budget around 45L. No hurry, just exploring options.',
     createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
     updatedAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+    score: 42,
+    priority: 'COLD',
     analysis: {
       summary: 'Casual retail investor exploring commercial passive income options in Noida Expressway with a ₹45L budget.',
       intent: 'Exploratory / Casual Browsing.',
@@ -222,80 +229,128 @@ const SEED_LEADS: Lead[] = [
   }
 ];
 
-// Helper to ensure data directory & file exist
-function getLeadsFromFile(): Lead[] {
-  try {
-    if (!fs.existsSync(DATA_FILE_PATH)) {
-      fs.writeFileSync(DATA_FILE_PATH, JSON.stringify(SEED_LEADS, null, 2), 'utf-8');
-      return SEED_LEADS;
-    }
-    const rawData = fs.readFileSync(DATA_FILE_PATH, 'utf-8');
-    const leads: Lead[] = JSON.parse(rawData);
-    return Array.isArray(leads) && leads.length > 0 ? leads : SEED_LEADS;
-  } catch (error) {
-    console.error('Error reading leads from file system:', error);
-    return SEED_LEADS;
-  }
+// Helper to convert database record to application Lead model
+function mapRecordToLead(record: any): Lead {
+  return {
+    id: record.id,
+    customerName: record.customerName,
+    location: record.location,
+    propertyRequirement: record.propertyRequirement,
+    budget: record.budget,
+    buyingTimeline: record.buyingTimeline,
+    customerMessage: record.customerMessage,
+    score: record.score ?? undefined,
+    priority: (record.priority as any) ?? undefined,
+    analysis: record.analysis ? JSON.parse(record.analysis) : undefined,
+    nextMove: record.nextMove ? JSON.parse(record.nextMove) : undefined,
+    chatHistory: record.chatHistory ? JSON.parse(record.chatHistory) : [],
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  };
 }
 
-function saveLeadsToFile(leads: Lead[]): void {
+// Helper to convert application Lead model to Prisma record input
+function mapLeadToRecord(lead: Lead) {
+  return {
+    id: lead.id,
+    customerName: lead.customerName,
+    location: lead.location,
+    propertyRequirement: lead.propertyRequirement,
+    budget: lead.budget,
+    buyingTimeline: lead.buyingTimeline,
+    customerMessage: lead.customerMessage,
+    score: lead.score ?? lead.analysis?.score ?? null,
+    priority: lead.priority ?? lead.analysis?.priority ?? null,
+    analysis: lead.analysis ? JSON.stringify(lead.analysis) : null,
+    nextMove: lead.nextMove ? JSON.stringify(lead.nextMove) : lead.analysis?.nextMove ? JSON.stringify(lead.analysis.nextMove) : null,
+    chatHistory: lead.chatHistory ? JSON.stringify(lead.chatHistory) : JSON.stringify([]),
+    createdAt: lead.createdAt,
+    updatedAt: lead.updatedAt,
+  };
+}
+
+// Automatically seed SQLite database if table is empty
+async function seedDatabaseIfNeeded(): Promise<void> {
   try {
-    fs.writeFileSync(DATA_FILE_PATH, JSON.stringify(leads, null, 2), 'utf-8');
+    const count = await prisma.lead.count();
+    if (count === 0) {
+      for (const lead of SEED_LEADS) {
+        await prisma.lead.create({
+          data: mapLeadToRecord(lead),
+        });
+      }
+    }
   } catch (error) {
-    console.error('Error writing leads to file system:', error);
+    console.error('Error seeding SQLite database:', error);
   }
 }
 
 export const db = {
-  getAllLeads(): Lead[] {
-    const leads = getLeadsFromFile();
+  async getAllLeads(): Promise<Lead[]> {
+    await seedDatabaseIfNeeded();
+    const records = await prisma.lead.findMany();
+    const leads = records.map(mapRecordToLead);
     // Sort leads by numeric score descending by default
-    return leads.sort((a, b) => (b.analysis?.score || 0) - (a.analysis?.score || 0));
+    return leads.sort((a, b) => (b.analysis?.score || b.score || 0) - (a.analysis?.score || a.score || 0));
   },
 
-  getLeadById(id: string): Lead | undefined {
-    const leads = getLeadsFromFile();
-    return leads.find(l => l.id === id);
+  async getLeadById(id: string): Promise<Lead | undefined> {
+    await seedDatabaseIfNeeded();
+    const record = await prisma.lead.findUnique({
+      where: { id },
+    });
+    if (!record) return undefined;
+    return mapRecordToLead(record);
   },
 
-  createLead(lead: Lead): Lead {
-    const leads = getLeadsFromFile();
-    leads.unshift(lead);
-    saveLeadsToFile(leads);
-    return lead;
+  async createLead(lead: Lead): Promise<Lead> {
+    await seedDatabaseIfNeeded();
+    const created = await prisma.lead.create({
+      data: mapLeadToRecord(lead),
+    });
+    return mapRecordToLead(created);
   },
 
-  updateLead(id: string, updatedFields: Partial<Lead>): Lead | undefined {
-    const leads = getLeadsFromFile();
-    const index = leads.findIndex(l => l.id === id);
-    if (index === -1) return undefined;
-    
-    leads[index] = {
-      ...leads[index],
+  async updateLead(id: string, updatedFields: Partial<Lead>): Promise<Lead | undefined> {
+    await seedDatabaseIfNeeded();
+    const existing = await this.getLeadById(id);
+    if (!existing) return undefined;
+
+    const mergedLead: Lead = {
+      ...existing,
       ...updatedFields,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
-    saveLeadsToFile(leads);
-    return leads[index];
+
+    const updated = await prisma.lead.update({
+      where: { id },
+      data: mapLeadToRecord(mergedLead),
+    });
+
+    return mapRecordToLead(updated);
   },
 
-  deleteLead(id: string): boolean {
-    const leads = getLeadsFromFile();
-    const filtered = leads.filter(l => l.id !== id);
-    if (filtered.length === leads.length) return false;
-    saveLeadsToFile(filtered);
-    return true;
+  async deleteLead(id: string): Promise<boolean> {
+    await seedDatabaseIfNeeded();
+    try {
+      await prisma.lead.delete({
+        where: { id },
+      });
+      return true;
+    } catch {
+      return false;
+    }
   },
 
-  addChatMessage(leadId: string, role: 'user' | 'assistant', content: string): Lead | undefined {
-    const lead = this.getLeadById(leadId);
+  async addChatMessage(leadId: string, role: 'user' | 'assistant', content: string): Promise<Lead | undefined> {
+    const lead = await this.getLeadById(leadId);
     if (!lead) return undefined;
 
     const newMsg = {
       id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
       role,
       content,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     const updatedHistory = [...(lead.chatHistory || []), newMsg];

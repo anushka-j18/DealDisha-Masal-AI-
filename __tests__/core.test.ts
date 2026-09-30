@@ -27,20 +27,20 @@ describe('DealDisha Core Functionality Test Suite', () => {
   });
 
   describe('2. Lead Storage & Retrieval (Database Engine)', () => {
-    it('should retrieve all initial seed leads sorted by score', () => {
-      const leads = db.getAllLeads();
+    it('should retrieve all initial seed leads sorted by score', async () => {
+      const leads = await db.getAllLeads();
       expect(Array.isArray(leads)).toBe(true);
       expect(leads.length).toBeGreaterThan(0);
 
       // Verify default sorting by score descending
       for (let i = 0; i < leads.length - 1; i++) {
-        const scoreCurrent = leads[i].analysis?.score || 0;
-        const scoreNext = leads[i + 1].analysis?.score || 0;
+        const scoreCurrent = leads[i].analysis?.score || leads[i].score || 0;
+        const scoreNext = leads[i + 1].analysis?.score || leads[i + 1].score || 0;
         expect(scoreCurrent).toBeGreaterThanOrEqual(scoreNext);
       }
     });
 
-    it('should create and retrieve a new lead record by ID', () => {
+    it('should create and retrieve a new lead record by ID', async () => {
       const testLead: Lead = {
         id: `test-lead-${Date.now()}`,
         customerName: 'Test Buyer',
@@ -51,6 +51,8 @@ describe('DealDisha Core Functionality Test Suite', () => {
         customerMessage: 'Urgent buyer looking for immediate 3BHK penthouse purchase.',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        score: 95,
+        priority: 'HOT',
         analysis: {
           summary: 'High value penthouse buyer in Indiranagar.',
           intent: 'Immediate Purchase Intent',
@@ -69,17 +71,17 @@ describe('DealDisha Core Functionality Test Suite', () => {
         },
       };
 
-      const created = db.createLead(testLead);
+      const created = await db.createLead(testLead);
       expect(created.id).toBe(testLead.id);
 
-      const fetched = db.getLeadById(testLead.id);
+      const fetched = await db.getLeadById(testLead.id);
       expect(fetched).toBeDefined();
       expect(fetched?.customerName).toBe('Test Buyer');
-      expect(fetched?.analysis?.score).toBe(95);
+      expect(fetched?.analysis?.score || fetched?.score).toBe(95);
 
       // Clean up test lead
-      db.deleteLead(testLead.id);
-      expect(db.getLeadById(testLead.id)).toBeUndefined();
+      await db.deleteLead(testLead.id);
+      expect(await db.getLeadById(testLead.id)).toBeUndefined();
     });
   });
 

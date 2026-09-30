@@ -78,7 +78,7 @@ DealDisha automates lead intake, intent extraction, urgency scoring, and action 
 - **Icons**: Lucide React
 - **AI SDK**: `@google/genai` (Google Gemini 2.5 API)
 - **Testing**: Vitest (`npm test`)
-- **Data Persistence**: Zero-config Node.js File System JSON Store (`dealdisha_leads.json`)
+- **Data Persistence**: Local SQLite database powered by Prisma ORM (`prisma/schema.prisma`, `dev.db`)
 
 ---
 

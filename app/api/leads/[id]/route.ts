@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const lead = db.getLeadById(id);
+    const lead = await db.getLeadById(id);
 
     if (!lead) {
       return NextResponse.json({ success: false, error: 'Lead not found' }, { status: 404 });
@@ -26,7 +26,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const success = db.deleteLead(id);
+    const success = await db.deleteLead(id);
 
     if (!success) {
       return NextResponse.json({ success: false, error: 'Lead not found' }, { status: 404 });
