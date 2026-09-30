@@ -2,31 +2,80 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { Building2, Lock, Mail, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Building2, Lock, Mail, ArrowRight, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 function LoginForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const registered = searchParams.get('registered');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [infoMsg, setInfoMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
 
   useEffect(() => {
     if (registered === 'true') {
-      setShowSuccess(true);
+      setShowSuccessBanner(true);
     }
   }, [registered]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setInfoMsg('Authentication is coming soon! You can explore the Sales Dashboard directly.');
+    setError(null);
+    setShowSuccessBanner(false);
+
+    // Form Validation
+    if (!email.trim()) {
+      setError('Please enter your email address.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!password) {
+      setError('Please enter your password.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Invalid email or password.');
+        setLoading(false);
+        return;
+      }
+
+      // Successful login: redirect to main sales dashboard
+      router.push('/');
+      router.refresh();
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('A network error occurred. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="w-full max-w-md z-10">
+    <div className="w-full max-w-md z-10 font-sans">
       {/* Brand Logo & Header */}
       <div className="text-center mb-8">
         <Link href="/" className="inline-flex items-center gap-3 group">
@@ -52,7 +101,7 @@ function LoginForm() {
 
       {/* Login Card */}
       <div className="bg-[#121826]/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-black/50">
-        {showSuccess && (
+        {showSuccessBanner && (
           <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-start gap-3 text-emerald-300 text-sm animate-in fade-in duration-200">
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
             <div>
@@ -62,15 +111,10 @@ function LoginForm() {
           </div>
         )}
 
-        {infoMsg && (
-          <div className="mb-6 p-3.5 bg-cyan-500/10 border border-cyan-500/30 rounded-xl flex items-start gap-3 text-cyan-300 text-sm animate-in fade-in duration-200">
-            <AlertCircle className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p>{infoMsg}</p>
-              <Link href="/" className="inline-flex items-center gap-1 font-semibold text-emerald-400 hover:underline">
-                Go to Dashboard <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
+        {error && (
+          <div className="mb-6 p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-xl flex items-start gap-3 text-rose-300 text-sm animate-in fade-in duration-200">
+            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+            <span>{error}</span>
           </div>
         )}
 
@@ -85,7 +129,10 @@ function LoginForm() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) setError(null);
+                }}
                 placeholder="name@company.com"
                 className="w-full bg-[#0A0D14] border border-slate-700/70 focus:border-emerald-500/80 focus:ring-1 focus:ring-emerald-500/80 text-slate-100 placeholder-slate-600 text-sm rounded-xl pl-10 pr-4 py-3 outline-none transition-all duration-200"
                 required
@@ -103,8 +150,11 @@ function LoginForm() {
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (error) setError(null);
+                }}
+                placeholder="Enter your password"
                 className="w-full bg-[#0A0D14] border border-slate-700/70 focus:border-emerald-500/80 focus:ring-1 focus:ring-emerald-500/80 text-slate-100 placeholder-slate-600 text-sm rounded-xl pl-10 pr-4 py-3 outline-none transition-all duration-200"
                 required
               />
@@ -114,10 +164,20 @@ function LoginForm() {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full mt-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-semibold text-sm rounded-xl py-3 px-4 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-[0.99] transition-all cursor-pointer"
+            disabled={loading}
+            className="w-full mt-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-semibold text-sm rounded-xl py-3 px-4 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
-            <span>Sign In</span>
-            <ArrowRight className="w-4 h-4" />
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Signing In...</span>
+              </>
+            ) : (
+              <>
+                <span>Sign In</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 

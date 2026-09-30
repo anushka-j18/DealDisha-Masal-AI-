@@ -2,9 +2,12 @@ import { describe, it, expect } from 'vitest';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { POST as signupHandler } from '../app/api/auth/signup/route';
+import { POST as loginHandler } from '../app/api/auth/login/route';
+import { getSession } from '../lib/auth';
 
 describe('DealDisha Auth & Signup Suite', () => {
   const testEmail = `testuser_${Date.now()}@dealdisha.io`;
+  const testPassword = 'SuperSecretPassword123!';
 
   it('1. should reject signup requests missing required fields', async () => {
     const req = new Request('http://localhost:3000/api/auth/signup', {
@@ -83,15 +86,13 @@ describe('DealDisha Auth & Signup Suite', () => {
   });
 
   it('5. should create user account with bcrypt salted hashed password', async () => {
-    const plainPassword = 'SuperSecretPassword123!';
-
     const req = new Request('http://localhost:3000/api/auth/signup', {
       method: 'POST',
       body: JSON.stringify({
         name: 'Ananya Sharma',
         email: testEmail,
-        password: plainPassword,
-        confirmPassword: plainPassword,
+        password: testPassword,
+        confirmPassword: testPassword,
       }),
     });
 
@@ -111,10 +112,10 @@ describe('DealDisha Auth & Signup Suite', () => {
     expect(storedUser?.name).toBe('Ananya Sharma');
 
     // Ensure password is NOT stored as plaintext
-    expect(storedUser?.passwordHash).not.toBe(plainPassword);
+    expect(storedUser?.passwordHash).not.toBe(testPassword);
 
     // Verify bcrypt hash validity
-    const match = await bcrypt.compare(plainPassword, storedUser!.passwordHash);
+    const match = await bcrypt.compare(testPassword, storedUser!.passwordHash);
     expect(match).toBe(true);
   });
 
@@ -135,5 +136,80 @@ describe('DealDisha Auth & Signup Suite', () => {
     expect(res.status).toBe(400);
     expect(data.success).toBe(false);
     expect(data.error).toContain('already exists');
+  });
+
+  describe('Login Functionality & Verification', () => {
+    it('7. should reject login attempts with missing email or password', async () => {
+      const req = new Request('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: '',
+          password: 'Password123',
+        }),
+      });
+
+      const res = await loginHandler(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(400);
+      expect(data.success).toBe(false);
+      expect(data.error).toContain('Email address is required');
+    });
+
+    it('8. should reject login attempts for non-existent users', async () => {
+      const req = new Request('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: 'nonexistent_user_9999@dealdisha.io',
+          password: 'Password123',
+        }),
+      });
+
+      const res = await loginHandler(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(401);
+      expect(data.success).toBe(false);
+      expect(data.error).toBe('Invalid email or password.');
+    });
+
+    it('9. should reject login attempts with incorrect password', async () => {
+      const req = new Request('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: testEmail,
+          password: 'WrongPassword456!',
+        }),
+      });
+
+      const res = await loginHandler(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(401);
+      expect(data.success).toBe(false);
+      expect(data.error).toBe('Invalid email or password.');
+    });
+
+    it('10. should successfully authenticate with correct credentials and set session cookie', async () => {
+      const req = new Request('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: testEmail,
+          password: testPassword,
+        }),
+      });
+
+      const res = await loginHandler(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.user.email).toBe(testEmail);
+      expect(data.user.name).toBe('Ananya Sharma');
+
+      // Verify session cookie header set
+      const setCookieHeader = res.headers.get('set-cookie');
+      expect(setCookieHeader).toContain('dealdisha_session');
+    });
   });
 });
