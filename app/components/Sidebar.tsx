@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { LayoutDashboard, Users, BarChart3, Settings, Plus, Target, Compass } from 'lucide-react';
+import { LayoutDashboard, Users, BarChart3, Settings, Plus, Target, LogOut } from 'lucide-react';
 
 interface SidebarProps {
   currentTab: 'overview' | 'leads' | 'insights';
@@ -16,6 +16,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenIntakeModal,
   unreadCount = 0,
 }) => {
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      window.location.href = '/login';
+    }
+  };
+
   const navItems: { id: 'overview' | 'leads' | 'insights'; label: string; icon: any; badge?: number | null }[] = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'leads', label: 'Leads', icon: Users, badge: unreadCount > 0 ? unreadCount : null },
@@ -46,7 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-3">
           <button
             onClick={onOpenIntakeModal}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>Add Lead</span>
@@ -62,7 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`w-full flex items-center justify-between rounded-md px-3 py-2 text-xs font-medium transition-colors ${
+                className={`w-full flex items-center justify-between rounded-md px-3 py-2 text-xs font-medium transition-colors cursor-pointer ${
                   isActive
                     ? 'bg-slate-100 text-slate-900 font-semibold'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
@@ -85,9 +95,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer / User Profile */}
       <div className="p-3 border-t border-slate-100 space-y-1">
-        <button className="w-full flex items-center gap-2.5 rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
-          <Settings className="h-4 w-4 text-slate-400" />
-          <span>Settings</span>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-between rounded-md px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+          title="Sign out of DealDisha"
+        >
+          <div className="flex items-center gap-2.5">
+            <LogOut className="h-4 w-4 text-rose-500" />
+            <span>Logout</span>
+          </div>
         </button>
 
         <div className="pt-2 border-t border-slate-100 flex items-center justify-between px-2 py-1">

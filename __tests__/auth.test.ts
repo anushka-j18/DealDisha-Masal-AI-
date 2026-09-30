@@ -3,7 +3,9 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { POST as signupHandler } from '../app/api/auth/signup/route';
 import { POST as loginHandler } from '../app/api/auth/login/route';
-import { getSession } from '../lib/auth';
+import { POST as logoutHandler } from '../app/api/auth/logout/route';
+import { middleware } from '../middleware';
+import { NextRequest } from 'next/server';
 
 describe('DealDisha Auth & Signup Suite', () => {
   const testEmail = `testuser_${Date.now()}@dealdisha.io`;
@@ -210,6 +212,38 @@ describe('DealDisha Auth & Signup Suite', () => {
       // Verify session cookie header set
       const setCookieHeader = res.headers.get('set-cookie');
       expect(setCookieHeader).toContain('dealdisha_session');
+    });
+  });
+
+  describe('Logout & Route Protection Suite', () => {
+    it('11. should clear session cookie on logout request', async () => {
+      const res = await logoutHandler();
+      const data = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(data.success).toBe(true);
+
+      const setCookieHeader = res.headers.get('set-cookie');
+      expect(setCookieHeader).toContain('dealdisha_session=;');
+      expect(setCookieHeader).toContain('Max-Age=0');
+    });
+
+    it('12. middleware should redirect unauthenticated requests to protected page to /login', async () => {
+      const req = new NextRequest('http://localhost:3000/');
+      const res = await middleware(req);
+
+      expect(res.status).toBe(307); // Temporary Redirect
+      expect(res.headers.get('location')).toContain('/login');
+    });
+
+    it('13. middleware should reject unauthenticated requests to protected API endpoints with 401', async () => {
+      const req = new NextRequest('http://localhost:3000/api/leads');
+      const res = await middleware(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(401);
+      expect(data.success).toBe(false);
+      expect(data.error).toContain('Unauthorized');
     });
   });
 });
